@@ -32,6 +32,13 @@ BASE_DIR   = Path(__file__).resolve().parent.parent
 DATA_DIR   = BASE_DIR / "data"
 CACHE_FILE = DATA_DIR / "poster_cache.json"
 
+# Auto-load .env from project root
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / ".env")
+except ImportError:
+    pass
+
 TMDB_KEY  = os.environ.get("TMDB_API_KEY", "").strip()
 if not TMDB_KEY:
     TMDB_KEY = input("Masukkan TMDB API Key (v3): ").strip()
@@ -118,7 +125,13 @@ def main():
     print(f"Sudah ada poster : {already_filled}")
     print(f"Perlu di-fetch   : {len(rows_todo)}")
 
-    for i, row in tqdm(rows_todo, desc="Fetching posters", unit="film"):
+    _lim_env   = os.environ.get("POSTER_LIMIT", "").strip()
+    LIMIT      = int(_lim_env) if _lim_env else len(rows_todo)
+    SAVE_EVERY = 50   # simpan cache setiap N film agar tidak hilang jika dihentikan
+    rows_todo  = rows_todo[:LIMIT]
+    print(f"Target       : {len(rows_todo)} film")
+
+    for step, (i, row) in enumerate(tqdm(rows_todo, desc="Fetching posters", unit="film"), 1):
         title = str(row.get("title", "")).strip()
         year  = clean_year(row.get("year"))
         key   = f"{title}|{year}"
@@ -136,10 +149,13 @@ def main():
             df.at[i, "poster_url"] = url
             filled_before += 1
 
-    # Save cache
-    CACHE_FILE.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
+        # Simpan cache berkala agar progress tidak hilang jika dihentikan
+        if step % SAVE_EVERY == 0:
+            CACHE_FILE.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
+            df.to_csv(csv_path, index=False, encoding="utf-8")
 
-    # Save updated CSV
+    # Final save
+    CACHE_FILE.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
     df.to_csv(csv_path, index=False, encoding="utf-8")
 
     total_with_poster = df["poster_url"].apply(
