@@ -433,14 +433,24 @@ const SLIDE_LIMIT = Math.min(SLIDES_DATA.length, 5);
     setActive('all');
   }
 
-  /* Load genre via API */
-  function loadGenre(genre) {
-    if (browseGrid)    browseGrid.innerHTML = '';
-    if (browseLoading) browseLoading.style.display = 'flex';
+  /* Load genre via API — with one auto-retry on cold-start failure */
+  function loadGenre(genre, attempt) {
+    attempt = attempt || 0;
+    var icon = GENRE_ICONS[genre] || 'bi-film';
+
+    /* Update title + sidebar immediately (before fetch) */
+    setTitle('<i class="bi ' + escHtml(icon) + '"></i> ' + escHtml(genre),
+             '/genre/' + encodeURIComponent(genre));
     setActive(genre);
 
+    /* Show loading spinner; don't wipe existing grid until data arrives */
+    if (browseLoading) browseLoading.style.display = 'flex';
+
     fetch('/api/search?q=' + encodeURIComponent(genre) + '&field=genre&n=40')
-      .then(function(r) { return r.json(); })
+      .then(function(r) {
+        if (!r.ok) throw new Error('status ' + r.status);
+        return r.json();
+      })
       .then(function(data) {
         if (browseLoading) browseLoading.style.display = 'none';
         if (browseGrid) {
@@ -448,13 +458,30 @@ const SLIDE_LIMIT = Math.min(SLIDES_DATA.length, 5);
             ? data.map(function(m) { return buildCard(m); }).join('')
             : '<p style="color:var(--t2);padding:36px 0;font-size:.87rem">Tidak ada film ditemukan untuk genre ini.</p>';
         }
-        var icon = GENRE_ICONS[genre] || 'bi-film';
-        setTitle('<i class="bi ' + escHtml(icon) + '"></i> ' + escHtml(genre),
-                 '/genre/' + encodeURIComponent(genre));
       })
       .catch(function() {
         if (browseLoading) browseLoading.style.display = 'none';
-        if (browseGrid) browseGrid.innerHTML = '<p style="color:var(--t2);padding:36px 0;font-size:.87rem">Gagal memuat film.</p>';
+        if (attempt < 1) {
+          /* Cold-start retry: wait 2.5s then try again */
+          if (browseGrid) browseGrid.innerHTML =
+            '<p style="color:var(--t2);padding:36px 0;font-size:.84rem;display:flex;align-items:center;gap:8px">' +
+            '<i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite"></i> Memuat ulang, mohon tunggu…</p>';
+          setTimeout(function() { loadGenre(genre, 1); }, 2500);
+        } else {
+          /* Final failure — show retry button */
+          if (browseGrid) {
+            var errWrap = document.createElement('p');
+            errWrap.style.cssText = 'color:var(--t2);padding:36px 0;font-size:.84rem;display:flex;align-items:center;gap:12px';
+            errWrap.innerHTML = '<i class="bi bi-wifi-off"></i> Gagal memuat.';
+            var retryBtn = document.createElement('button');
+            retryBtn.className = 'btn btn-outline btn-sm';
+            retryBtn.textContent = 'Coba lagi';
+            retryBtn.onclick = function() { loadGenre(genre); };
+            errWrap.appendChild(retryBtn);
+            browseGrid.innerHTML = '';
+            browseGrid.appendChild(errWrap);
+          }
+        }
       });
   }
 
