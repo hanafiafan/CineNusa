@@ -3,20 +3,26 @@
 
 {% block content %}
 
-{# ── HERO ──────────────────────────────────────────────────────────── #}
+{# ── HERO (auto-slider) ─────────────────────────────────────────────── #}
 {% set hero = featured[0] if featured else none %}
-<section class="hero" {% if hero and hero.poster_url and hero.poster_url not in ('nan','None','') %}style="--hero-bg: url('{{ hero.poster_url }}')"{% endif %}>
+<section class="hero" id="hero">
+  {# Background layer — swapped by JS during slide transitions #}
+  <div class="hero-bg" id="hero-bg"
+    {% if hero and hero.poster_url and hero.poster_url not in ('nan','None','') %}
+    style="background-image: url('{{ hero.poster_url }}')"
+    {% endif %}></div>
+
   <div class="hero-gradient"></div>
   <canvas id="neural-canvas"></canvas>
 
-  <div class="hero-content">
+  <div class="hero-content" id="hero-content">
     <div class="hero-badge">
       <i class="bi bi-stars"></i> AI Movie Recommender · SENATIB 2026
     </div>
 
     {% if hero %}
-    <h1 class="hero-title">{{ hero.title }}</h1>
-    <div class="hero-meta">
+    <h1 class="hero-title" id="hero-title">{{ hero.title }}</h1>
+    <div class="hero-meta" id="hero-meta">
       {% if hero.year and hero.year not in ('nan','') %}
         <span><i class="bi bi-calendar3"></i> {{ hero.year }}</span>
       {% endif %}
@@ -28,17 +34,18 @@
       {% endif %}
     </div>
     {% if hero.genre and hero.genre not in ('nan','') %}
-    <div class="hero-genres">
+    <div class="hero-genres" id="hero-genres">
       {% for g in hero.genre.replace('|',',').split(',')[:4] %}
       <span class="hero-genre-tag">{{ g.strip() }}</span>
       {% endfor %}
     </div>
     {% endif %}
     {% if hero.description and hero.description not in ('nan','') %}
-    <p class="hero-desc">{{ hero.description[:200] }}{% if hero.description|length > 200 %}…{% endif %}</p>
+    <p class="hero-desc" id="hero-desc">{{ hero.description[:200] }}{% if hero.description|length > 200 %}…{% endif %}</p>
     {% endif %}
     <div class="hero-actions">
-      <a href="{{ url_for('movie_detail', movie_id=hero.movieId) }}" class="btn-hero-primary">
+      <a href="{{ url_for('movie_detail', movie_id=hero.movieId) }}"
+         class="btn-hero-primary" id="hero-main-link">
         <i class="bi bi-play-fill"></i> Lihat Detail
       </a>
       <a href="{{ url_for('recommendations') }}" class="btn-hero-secondary">
@@ -59,13 +66,14 @@
     {% endif %}
   </div>
 
-  {# Thumbnail strip — top 5 featured films #}
+  {# Thumbnail strip — clicking changes slide (JS intercepts navigation) #}
   {% if featured|length > 1 %}
-  <div class="hero-films">
+  <div class="hero-films" id="hero-thumbs">
     {% for movie in featured[:5] %}
     <a href="{{ url_for('movie_detail', movie_id=movie.movieId) }}"
        class="hero-film-thumb {% if loop.index == 1 %}active{% endif %}"
-       title="{{ movie.title }}">
+       title="{{ movie.title }}"
+       data-idx="{{ loop.index0 }}">
       {% if movie.poster_url and movie.poster_url not in ('nan','None','') %}
       <img src="{{ movie.poster_url }}" alt="{{ movie.title }}" loading="lazy">
       {% else %}
@@ -75,6 +83,14 @@
     {% endfor %}
   </div>
   {% endif %}
+
+  {# Slide indicator dots #}
+  <div class="hero-slide-dots" id="hero-dots"></div>
+
+  {# Auto-slide progress bar #}
+  <div class="hero-progress">
+    <div class="hero-progress-bar" id="hero-progress-bar"></div>
+  </div>
 </section>
 
 {# ── STATS BAR ──────────────────────────────────────────────────────── #}
@@ -106,43 +122,6 @@
   </div>
 </div>
 {% endif %}
-
-{# ── MOOD FILTER ────────────────────────────────────────────────────── #}
-<section class="mood-section">
-  <div class="section-header">
-    <h2 class="section-title"><i class="bi bi-emoji-smile"></i> Lagi Mau Nonton Apa?</h2>
-  </div>
-  <div class="mood-chips">
-    <button class="mood-chip" data-mood="Bahagia" data-genres="Comedy,Family,Animation">
-      <i class="bi bi-emoji-laughing"></i> Bahagia
-    </button>
-    <button class="mood-chip" data-mood="Seram" data-genres="Horror,Thriller">
-      <i class="bi bi-moon-stars"></i> Seram
-    </button>
-    <button class="mood-chip" data-mood="Tegang" data-genres="Action,Crime">
-      <i class="bi bi-lightning-charge"></i> Tegang
-    </button>
-    <button class="mood-chip" data-mood="Romantis" data-genres="Romance,Drama">
-      <i class="bi bi-heart"></i> Romantis
-    </button>
-    <button class="mood-chip" data-mood="Petualangan" data-genres="Adventure,Fantasy">
-      <i class="bi bi-rocket"></i> Petualangan
-    </button>
-    <button class="mood-chip" data-mood="Inspirasi" data-genres="Biography,History,Music">
-      <i class="bi bi-lightbulb"></i> Inspirasi
-    </button>
-    <button class="mood-chip" data-mood="Sci-Fi" data-genres="Sci-Fi,Animation">
-      <i class="bi bi-cpu"></i> Sci-Fi
-    </button>
-  </div>
-  <div class="mood-result-section" id="mood-result-section" style="display:none">
-    <div class="section-header">
-      <h3 class="section-title" id="mood-result-title">Film untuk mood ini</h3>
-      <a class="section-see-all" id="mood-see-all" href="#">Lihat Semua <i class="bi bi-chevron-right"></i></a>
-    </div>
-    <div class="film-row" id="mood-film-row"></div>
-  </div>
-</section>
 
 {# ── POPULER ────────────────────────────────────────────────────────── #}
 {% if featured %}
@@ -177,24 +156,33 @@
 </section>
 {% endif %}
 
-{# ── GENRE ROWS (lazy) ──────────────────────────────────────────────── #}
-<div id="genre-rows">
-  {% for genre_name in genres[:10] %}
-  <section class="content-section genre-row-section" data-genre="{{ genre_name }}" data-loaded="false">
-    <div class="section-header">
-      <h2 class="section-title">{{ genre_name }}</h2>
-      <a href="{{ url_for('genre_page', genre_name=genre_name) }}" class="section-see-all">
-        Lihat Semua <i class="bi bi-chevron-right"></i>
-      </a>
-    </div>
-    <div class="film-row genre-film-row">
-      <span style="color:var(--t3);font-size:.84rem;padding:20px 0;display:flex;align-items:center;gap:8px">
+{# ── BROWSE — vertical genre sidebar + film grid ─────────────────────── #}
+<section class="browse-section content-section">
+  <div class="section-header">
+    <h2 class="section-title"><i class="bi bi-compass-fill"></i> Jelajahi Film</h2>
+  </div>
+  <div class="browse-layout">
+
+    {# Vertical genre icon sidebar — populated by JS #}
+    <aside class="genre-sidebar" id="genre-sidebar"></aside>
+
+    {# Film display area #}
+    <div class="browse-content">
+      <div class="browse-header">
+        <h3 class="browse-title" id="browse-title">
+          <i class="bi bi-grid-3x3-gap-fill"></i> Semua Film
+        </h3>
+        <a href="{{ url_for('search') }}" class="browse-see-all" id="browse-see-all">
+          Lihat Semua <i class="bi bi-chevron-right"></i>
+        </a>
+      </div>
+      <div class="film-grid" id="browse-grid"></div>
+      <div class="browse-loading" id="browse-loading" style="display:none">
         <i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite"></i> Memuat…
-      </span>
+      </div>
     </div>
-  </section>
-  {% endfor %}
-</div>
+  </div>
+</section>
 
 {% endblock %}
 
@@ -203,82 +191,284 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 <script>
-/* ── Mood chips ── */
-document.querySelectorAll('.mood-chip').forEach(btn => {
-  btn.addEventListener('click', async function() {
-    document.querySelectorAll('.mood-chip').forEach(b => b.classList.remove('active'));
-    this.classList.add('active');
+/* Data injected from Flask — available to all inline scripts below */
+const SLIDES_DATA = {{ featured | tojson }};
+const GENRES_DATA = {{ genres   | tojson }};
+const SLIDE_LIMIT = Math.min(SLIDES_DATA.length, 5);
 
-    const mood   = this.dataset.mood;
-    const genres = this.dataset.genres.split(',');
-    const sec    = document.getElementById('mood-result-section');
-    const row    = document.getElementById('mood-film-row');
-    const title  = document.getElementById('mood-result-title');
-    const seeAll = document.getElementById('mood-see-all');
+/* ══════════════════════════════════════════════════════════════════════
+   HERO AUTO-SLIDER
+   ══════════════════════════════════════════════════════════════════════ */
+(function() {
+  if (SLIDE_LIMIT < 2) return;
 
-    title.textContent = `Film untuk mood "${mood}"`;
-    seeAll.href = `/genre/${encodeURIComponent(genres[0])}`;
-    sec.style.display = '';
-    row.innerHTML = '<span style="color:var(--t3);font-size:.84rem;padding:20px 0;display:flex;align-items:center;gap:8px"><i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite"></i> Memuat…</span>';
+  const INTERVAL   = 6000;
+  const bgEl       = document.getElementById('hero-bg');
+  const contentEl  = document.getElementById('hero-content');
+  const dotsWrap   = document.getElementById('hero-dots');
+  const progressBar = document.getElementById('hero-progress-bar');
+  const mainLink   = document.getElementById('hero-main-link');
+  const thumbEls   = document.querySelectorAll('.hero-film-thumb');
 
-    const all = [];
-    for (const g of genres) {
-      try {
-        const data = await fetch(`/api/search?q=${encodeURIComponent(g)}&field=genre&n=10`).then(r => r.json());
-        all.push(...data);
-      } catch(e) {}
+  let current = 0;
+  let timer;
+  let busy = false;
+
+  /* Build slide-indicator dots */
+  for (let i = 0; i < SLIDE_LIMIT; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'hero-slide-dot' + (i === 0 ? ' active' : '');
+    btn.setAttribute('aria-label', 'Slide ' + (i + 1));
+    btn.addEventListener('click', () => { goTo(i); restart(); });
+    dotsWrap?.appendChild(btn);
+  }
+
+  function setDots(idx) {
+    document.querySelectorAll('.hero-slide-dot').forEach((d, i) =>
+      d.classList.toggle('active', i === idx));
+  }
+
+  function setThumbs(idx) {
+    thumbEls.forEach((th, i) => th.classList.toggle('active', i === idx));
+  }
+
+  function animateProgress() {
+    if (!progressBar) return;
+    progressBar.style.transition = 'none';
+    progressBar.style.width = '0%';
+    progressBar.offsetWidth; /* reflow */
+    progressBar.style.transition = 'width ' + INTERVAL + 'ms linear';
+    progressBar.style.width = '100%';
+  }
+
+  function renderContent(s) {
+    const titleEl = document.getElementById('hero-title');
+    const metaEl  = document.getElementById('hero-meta');
+    const genreEl = document.getElementById('hero-genres');
+    const descEl  = document.getElementById('hero-desc');
+
+    if (titleEl) titleEl.textContent = s.title || '';
+    if (mainLink) mainLink.href = '/movie/' + s.movieId;
+
+    if (metaEl) {
+      const parts = [];
+      const yr  = (s.year  && s.year  !== 'nan' && s.year  !== 'None') ? s.year  : '';
+      const dur = (s.duration && s.duration !== 'nan' && s.duration !== 'None') ? s.duration : '';
+      const rat = s.rating ? parseFloat(s.rating).toFixed(1) : '';
+      if (yr)  parts.push('<span><i class="bi bi-calendar3"></i> ' + escHtml(yr) + '</span>');
+      if (dur) parts.push('<span><i class="bi bi-clock"></i> ' + escHtml(dur) + '</span>');
+      if (rat) parts.push('<span class="hero-rating"><i class="bi bi-star-fill"></i> ' + rat + '/10</span>');
+      metaEl.innerHTML = parts.join('');
     }
-    const seen = new Set();
-    const unique = all.filter(m => { if (seen.has(m.movieId)) return false; seen.add(m.movieId); return true; });
 
-    row.innerHTML = unique.slice(0, 16).map(m => buildCard(m)).join('');
-    if (!unique.length) {
-      row.innerHTML = '<span style="color:var(--t2);padding:20px">Tidak ada film ditemukan</span>';
+    if (genreEl) {
+      if (s.genre && s.genre !== 'nan' && s.genre !== 'None') {
+        const gs = s.genre.replace(/\|/g, ',').split(',').slice(0, 4);
+        genreEl.innerHTML = gs.map(g => '<span class="hero-genre-tag">' + escHtml(g.trim()) + '</span>').join('');
+        genreEl.style.display = '';
+      } else {
+        genreEl.style.display = 'none';
+      }
     }
-    sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    if (descEl) {
+      const d = (s.description && s.description !== 'nan' && s.description !== 'None')
+        ? s.description.slice(0, 200) + (s.description.length > 200 ? '…' : '') : '';
+      descEl.textContent = d;
+      descEl.style.display = d ? '' : 'none';
+    }
+  }
+
+  function goTo(idx) {
+    if (busy || idx === current) return;
+    busy = true;
+
+    /* Fade out */
+    if (bgEl)      bgEl.style.opacity = '0';
+    if (contentEl) contentEl.style.opacity = '0';
+
+    setTimeout(function() {
+      const s = SLIDES_DATA[idx];
+
+      /* Swap background */
+      if (bgEl) {
+        const ok = s.poster_url && s.poster_url !== 'nan' &&
+                   s.poster_url !== 'None' && s.poster_url.startsWith('http');
+        bgEl.style.backgroundImage = ok ? "url('" + s.poster_url + "')" : 'none';
+      }
+
+      renderContent(s);
+      current = idx;
+      setDots(idx);
+      setThumbs(idx);
+
+      /* Fade in */
+      if (bgEl)      bgEl.style.opacity = '1';
+      if (contentEl) contentEl.style.opacity = '1';
+
+      animateProgress();
+      busy = false;
+    }, 520);
+  }
+
+  function next()    { goTo((current + 1) % SLIDE_LIMIT); }
+  function start()   { timer = setInterval(next, INTERVAL); animateProgress(); }
+  function stop()    { clearInterval(timer); if (progressBar) { progressBar.style.transition = 'none'; progressBar.style.width = '0%'; } }
+  function restart() { stop(); start(); }
+
+  /* Thumbnail clicks: switch slide, no page navigation */
+  thumbEls.forEach(function(th) {
+    th.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var idx = parseInt(th.dataset.idx, 10);
+      if (!isNaN(idx) && idx !== current) { goTo(idx); restart(); }
+    });
   });
-});
 
-/* ── AI Picks row ── */
+  /* Pause while hovering hero */
+  var heroEl = document.getElementById('hero');
+  if (heroEl) {
+    heroEl.addEventListener('mouseenter', stop);
+    heroEl.addEventListener('mouseleave', start);
+  }
+
+  start();
+})();
+
+/* ══════════════════════════════════════════════════════════════════════
+   AI PICKS ROW
+   ══════════════════════════════════════════════════════════════════════ */
 {% if n_rated > 0 %}
 (function() {
-  fetch('/recommendations?json=1')
-    .catch(() => null)
-    .then(() => {
-      fetch('/api/search?q=Drama&field=genre&n=16')
-        .then(r => r.json())
-        .then(data => {
-          const row = document.getElementById('ai-picks-row');
-          if (row && data.length) row.innerHTML = data.map(m => buildCard(m)).join('');
-        })
-        .catch(() => {});
-    });
+  fetch('/api/search?q=Drama&field=genre&n=16')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var row = document.getElementById('ai-picks-row');
+      if (row && data.length) row.innerHTML = data.map(function(m) { return buildCard(m); }).join('');
+    })
+    .catch(function() {});
 })();
 {% endif %}
 
-/* ── Lazy genre rows ── */
-const genreObserver = new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if (!entry.isIntersecting) return;
-    const section = entry.target;
-    if (section.dataset.loaded === 'true') return;
-    section.dataset.loaded = 'true';
-    genreObserver.unobserve(section);
+/* ══════════════════════════════════════════════════════════════════════
+   GENRE SIDEBAR + BROWSE CONTENT
+   ══════════════════════════════════════════════════════════════════════ */
+(function() {
+  var GENRE_ICONS = {
+    'Action':      'bi-lightning-charge-fill',
+    'Adventure':   'bi-compass-fill',
+    'Animation':   'bi-stars',
+    'Biography':   'bi-person-badge-fill',
+    'Comedy':      'bi-emoji-laughing-fill',
+    'Crime':       'bi-shield-exclamation-fill',
+    'Documentary': 'bi-camera-reels-fill',
+    'Drama':       'bi-film',
+    'Family':      'bi-house-heart-fill',
+    'Fantasy':     'bi-gem',
+    'History':     'bi-hourglass-split',
+    'Horror':      'bi-moon-stars-fill',
+    'Music':       'bi-music-note-beamed',
+    'Musical':     'bi-music-note-list',
+    'Mystery':     'bi-eye-fill',
+    'Romance':     'bi-heart-fill',
+    'Sci-Fi':      'bi-cpu-fill',
+    'Thriller':    'bi-exclamation-octagon-fill',
+    'War':         'bi-flag-fill',
+  };
 
-    const genre = section.dataset.genre;
-    const row   = section.querySelector('.genre-film-row');
-    if (!row) return;
+  var sidebar       = document.getElementById('genre-sidebar');
+  var browseGrid    = document.getElementById('browse-grid');
+  var browseLoading = document.getElementById('browse-loading');
+  var browseTitleEl = document.getElementById('browse-title');
+  var browseSeeAll  = document.getElementById('browse-see-all');
 
-    fetch(`/api/search?q=${encodeURIComponent(genre)}&field=genre&n=20`)
-      .then(r => r.json())
-      .then(data => {
-        if (!data.length) { row.innerHTML = ''; return; }
-        row.innerHTML = data.map(m => buildCard(m)).join('');
-      })
-      .catch(() => { row.innerHTML = ''; });
+  if (!sidebar) return;
+
+  /* Build "Semua Film" button */
+  var allBtn = document.createElement('button');
+  allBtn.className = 'gsb-item active';
+  allBtn.dataset.genre = 'all';
+  allBtn.innerHTML = '<i class="bi bi-grid-3x3-gap-fill"></i><span>Semua Film</span>';
+  sidebar.appendChild(allBtn);
+
+  /* Build genre buttons */
+  GENRES_DATA.forEach(function(g) {
+    var icon = GENRE_ICONS[g] || 'bi-film';
+    var btn = document.createElement('button');
+    btn.className = 'gsb-item';
+    btn.dataset.genre = g;
+    btn.innerHTML = '<i class="bi ' + escHtml(icon) + '"></i><span>' + escHtml(g) + '</span>';
+    sidebar.appendChild(btn);
   });
-}, { rootMargin: '0px 0px 300px 0px' });
 
-document.querySelectorAll('.genre-row-section').forEach(s => genreObserver.observe(s));
+  /* Separator */
+  var sep = document.createElement('div');
+  sep.className = 'gsb-separator';
+  sidebar.appendChild(sep);
+
+  /* "Semua Genre" link → /search */
+  var allLink = document.createElement('a');
+  allLink.href = '/search';
+  allLink.className = 'gsb-item gsb-all-link';
+  allLink.innerHTML = '<i class="bi bi-list-ul"></i><span>Semua Genre</span>';
+  sidebar.appendChild(allLink);
+
+  /* Helpers */
+  function setActive(genre) {
+    sidebar.querySelectorAll('.gsb-item[data-genre]').forEach(function(el) {
+      el.classList.toggle('active', el.dataset.genre === genre);
+    });
+  }
+
+  function setTitle(html, seeAllHref) {
+    if (browseTitleEl) browseTitleEl.innerHTML = html;
+    if (browseSeeAll)  browseSeeAll.href = seeAllHref;
+  }
+
+  /* Show all films (from featured data already in page) */
+  function showAllFilms() {
+    if (browseGrid) browseGrid.innerHTML = SLIDES_DATA.map(function(m) { return buildCard(m); }).join('');
+    setTitle('<i class="bi bi-grid-3x3-gap-fill"></i> Semua Film', '/search');
+    setActive('all');
+  }
+
+  /* Load genre via API */
+  function loadGenre(genre) {
+    if (browseGrid)    browseGrid.innerHTML = '';
+    if (browseLoading) browseLoading.style.display = 'flex';
+    setActive(genre);
+
+    fetch('/api/search?q=' + encodeURIComponent(genre) + '&field=genre&n=40')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (browseLoading) browseLoading.style.display = 'none';
+        if (browseGrid) {
+          browseGrid.innerHTML = data.length
+            ? data.map(function(m) { return buildCard(m); }).join('')
+            : '<p style="color:var(--t2);padding:36px 0;font-size:.87rem">Tidak ada film ditemukan untuk genre ini.</p>';
+        }
+        var icon = GENRE_ICONS[genre] || 'bi-film';
+        setTitle('<i class="bi ' + escHtml(icon) + '"></i> ' + escHtml(genre),
+                 '/genre/' + encodeURIComponent(genre));
+      })
+      .catch(function() {
+        if (browseLoading) browseLoading.style.display = 'none';
+        if (browseGrid) browseGrid.innerHTML = '<p style="color:var(--t2);padding:36px 0;font-size:.87rem">Gagal memuat film.</p>';
+      });
+  }
+
+  /* Event delegation on sidebar */
+  sidebar.addEventListener('click', function(e) {
+    var item = e.target.closest('.gsb-item[data-genre]');
+    if (!item) return;
+    var genre = item.dataset.genre;
+    if (genre === 'all') showAllFilms();
+    else loadGenre(genre);
+  });
+
+  /* Initial state */
+  showAllFilms();
+})();
 </script>
 {% endblock %}

@@ -336,14 +336,15 @@ body.cursor-click #cursor-dot {
   overflow: hidden;
   background-color: var(--bg);
 }
-.hero::before {
-  content: '';
+.hero-bg {
   position: absolute;
   inset: 0;
-  background-image: var(--hero-bg, none);
   background-size: cover;
   background-position: center 20%;
+  background-repeat: no-repeat;
   transform: scale(1.02);
+  z-index: 0;
+  transition: opacity 0.55s ease;
 }
 .hero-gradient {
   position: absolute;
@@ -365,6 +366,7 @@ body.cursor-click #cursor-dot {
   z-index: 3;
   padding: calc(var(--nav-h) + 60px) var(--cpx) 96px;
   max-width: 580px;
+  transition: opacity 0.45s ease;
 }
 .hero-badge {
   display: inline-flex;
@@ -1032,11 +1034,190 @@ body.cursor-click #cursor-dot {
 }
 .page-fade-out { animation: pageFadeOut 0.2s ease forwards; }
 
-/* ── 24. RESPONSIVE ─────────────────────────────────────────────── */
+/* ── 24. HERO SLIDER ────────────────────────────────────────────── */
+.hero-progress {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: rgba(255,255,255,0.07);
+  z-index: 5;
+  overflow: hidden;
+}
+.hero-progress-bar {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--red), var(--red-h));
+}
+.hero-slide-dots {
+  position: absolute;
+  bottom: 26px;
+  left: var(--cpx);
+  z-index: 5;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.hero-slide-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.28);
+  border: none; padding: 0; cursor: pointer;
+  transition: width 0.3s, border-radius 0.3s, background 0.3s;
+  flex-shrink: 0;
+}
+.hero-slide-dot.active {
+  width: 22px;
+  border-radius: 3px;
+  background: var(--red);
+}
+
+/* ── 25. BROWSE / GENRE SIDEBAR ──────────────────────────────────── */
+.browse-section { padding-top: 44px; }
+
+.browse-layout {
+  display: flex;
+  align-items: flex-start;
+  padding: 20px 0 60px;
+}
+
+.genre-sidebar {
+  width: 82px;
+  flex-shrink: 0;
+  position: sticky;
+  top: calc(var(--nav-h) + 12px);
+  max-height: calc(100vh - var(--nav-h) - 24px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  padding-left: var(--cpx);
+  box-sizing: content-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.genre-sidebar::-webkit-scrollbar { display: none; }
+
+.gsb-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 4px;
+  border-radius: var(--r);
+  color: var(--t3);
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: var(--font-h);
+  text-align: center;
+  text-decoration: none;
+  transition: color var(--tr), background var(--tr);
+  width: 100%;
+}
+.gsb-item i { font-size: 1.25rem; transition: filter var(--tr); }
+.gsb-item span {
+  font-size: 0.57rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.gsb-item:hover {
+  color: var(--t);
+  background: rgba(255,255,255,0.05);
+}
+.gsb-item.active {
+  color: var(--red);
+  background: var(--red-dim);
+}
+.gsb-item.active i { filter: drop-shadow(0 0 6px var(--red-glow)); }
+
+.gsb-all-link { color: var(--cyan) !important; }
+.gsb-all-link i { color: var(--cyan); }
+.gsb-all-link:hover { background: var(--cyan-dim) !important; }
+
+.gsb-separator {
+  width: calc(100% - 16px);
+  height: 1px;
+  background: var(--brd);
+  margin: 6px 8px;
+  flex-shrink: 0;
+}
+
+.browse-content {
+  flex: 1;
+  min-width: 0;
+  padding-left: 18px;
+}
+
+.browse-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--cpx) 18px 0;
+}
+.browse-title {
+  font-family: var(--font-h);
+  font-size: 1.15rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.browse-see-all {
+  font-size: 0.8rem; color: var(--t2);
+  display: flex; align-items: center; gap: 4px;
+  transition: color var(--tr);
+  text-decoration: none;
+}
+.browse-see-all:hover { color: var(--cyan); }
+
+#browse-grid { padding-right: var(--cpx); }
+
+.browse-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 0;
+  color: var(--t2);
+  font-size: 0.87rem;
+}
+
+/* ── 26. RESPONSIVE ─────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .nav-links  { display: none; }
   .hero-films { display: none; }
   .hero-content { max-width: 100%; }
+}
+@media (max-width: 700px) {
+  .browse-layout { flex-direction: column; gap: 12px; }
+  .genre-sidebar {
+    width: 100%;
+    max-height: none;
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 var(--cpx) 4px;
+    box-sizing: border-box;
+    gap: 4px;
+  }
+  .gsb-item {
+    flex-direction: row;
+    flex-shrink: 0;
+    padding: 7px 14px;
+    gap: 7px;
+    white-space: nowrap;
+    border-radius: 999px;
+    border: 1px solid var(--brd);
+    width: auto;
+  }
+  .gsb-item span { text-transform: none; font-size: 0.8rem; letter-spacing: 0; }
+  .gsb-item.active { border-color: rgba(229,9,20,0.35); }
+  .gsb-separator { display: none; }
+  .browse-content { padding-left: var(--cpx); }
+  #browse-grid { padding-right: var(--cpx); }
+  .browse-header { padding-left: 0; }
 }
 @media (max-width: 600px) {
   .film-row  { gap: 8px; }
