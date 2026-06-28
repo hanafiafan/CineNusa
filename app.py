@@ -80,8 +80,26 @@ except Exception as e:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+# Only these columns are needed by the frontend; avoids NaN serialisation issues
+# from extra CSV columns (directors, actors, users_rating, languages, etc.)
+_API_COLS = [
+    'movieId', 'title', 'year', 'rating', 'genre',
+    'director', 'stars', 'description', 'poster_url',
+    'predicted_rating', 'similarity',
+]
+
+
 def _df_to_list(df):
-    return df.to_dict('records') if df is not None and len(df) else []
+    if df is None or len(df) == 0:
+        return []
+    cols = [c for c in _API_COLS if c in df.columns]
+    sub  = df[cols].copy()
+    for col in sub.columns:
+        if sub[col].dtype == object:
+            sub[col] = sub[col].fillna('').astype(str)
+        else:
+            sub[col] = sub[col].fillna(0)
+    return sub.to_dict('records')
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────

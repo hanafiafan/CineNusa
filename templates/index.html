@@ -466,7 +466,7 @@ const SLIDE_LIMIT = Math.min(SLIDES_DATA.length, 5);
           if (browseGrid) browseGrid.innerHTML =
             '<p style="color:var(--t2);padding:36px 0;font-size:.84rem;display:flex;align-items:center;gap:8px">' +
             '<i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite"></i> Memuat ulang, mohon tunggu…</p>';
-          setTimeout(function() { loadGenre(genre, 1); }, 2500);
+          setTimeout(function() { loadGenre(genre, 1); }, 5000);
         } else {
           /* Final failure — show retry button */
           if (browseGrid) {
@@ -493,6 +493,13 @@ const SLIDE_LIMIT = Math.min(SLIDES_DATA.length, 5);
     if (genre === 'all') showAllFilms();
     else loadGenre(genre);
   });
+
+  /* Warm-up: fire a silent request on page load so the serverless function
+     is ready before the user clicks a genre */
+  if (GENRES_DATA.length) {
+    fetch('/api/search?q=' + encodeURIComponent(GENRES_DATA[0]) + '&field=genre&n=1')
+      .catch(function() {});
+  }
 
   /* Initial state */
   showAllFilms();
