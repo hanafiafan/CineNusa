@@ -30,8 +30,13 @@ _COL_MAP = {
     'poster_url':  ['poster', 'poster_url', 'image', 'img_url'],
 }
 
-_BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(_BASE_DIR, 'models', 'svd_model.pkl')
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_ON_VERCEL = bool(os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV'))
+# On Vercel /tmp is the only writable path; locally use models/
+MODEL_PATH = (
+    '/tmp/cinenusa_svd.pkl' if _ON_VERCEL
+    else os.path.join(_BASE_DIR, 'models', 'svd_model.pkl')
+)
 
 
 class IndonesianMovieRecommender:
