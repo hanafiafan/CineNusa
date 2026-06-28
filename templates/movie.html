@@ -15,17 +15,16 @@
   <div class="detail-hero">
 
     {# Poster #}
-    <div class="detail-poster" id="detail-poster" data-genre="{{ genre0 }}">
+    <div class="detail-poster">
       {% if movie.poster_url and movie.poster_url not in ('nan','','None') %}
-        <img src="{{ movie.poster_url }}" alt="{{ movie.title }}" onerror="this.remove()">
+        <img src="{{ movie.poster_url }}" alt="{{ movie.title }}">
       {% endif %}
-      <div class="detail-poster-ph" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:3.5rem;opacity:.13"><i class="bi bi-film"></i></div>
+      <div class="detail-poster-ph"><i class="bi bi-film"></i></div>
     </div>
 
     {# Info #}
     <div class="detail-content">
 
-      {# Genre tags #}
       {% if all_genres %}
       <div class="detail-genre-tags">
         {% for g in all_genres[:5] %}
@@ -45,7 +44,7 @@
         {% endif %}
         <span class="detail-imdb">
           <i class="bi bi-star-fill"></i> {{ "%.1f"|format(movie.rating|float) }}/10
-          {% if movie.votes %}<small style="font-weight:400;opacity:.6;font-size:.75rem"> ({{ "{:,}".format(movie.votes|int) }})</small>{% endif %}
+          {% if movie.votes %}<small style="font-weight:400;opacity:.55;font-size:.75rem"> ({{ "{:,}".format(movie.votes|int) }})</small>{% endif %}
         </span>
       </div>
 
@@ -57,21 +56,26 @@
       {% endif %}
       {% if movie.stars and movie.stars not in ('nan','') %}
         <p class="detail-crew">
-          <strong>Pemain:</strong> {{ movie.stars[:100] }}{% if movie.stars|length > 100 %}…{% endif %}
+          <strong>Pemain:</strong>
+          {{ movie.stars[:120] }}{% if movie.stars|length > 120 %}…{% endif %}
         </p>
       {% endif %}
 
       {% if movie.description and movie.description not in ('nan','') %}
-        <p class="detail-synopsis">{{ movie.description[:300] }}{% if movie.description|length > 300 %}…{% endif %}</p>
+        <p class="detail-synopsis">
+          {{ movie.description[:320] }}{% if movie.description|length > 320 %}…{% endif %}
+        </p>
       {% endif %}
 
       <div class="detail-actions">
         <a href="{{ url_for('compare', id1=movie.movieId) }}" class="btn btn-outline">
           <i class="bi bi-layout-split"></i> Bandingkan
         </a>
+        {% if genre0 %}
         <a href="{{ url_for('search', q=genre0, field='genre') }}" class="btn btn-outline">
           <i class="bi bi-grid"></i> Film {{ genre0 }} Lain
         </a>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -80,7 +84,7 @@
   <div class="rating-card">
     <div class="rating-card-label">
       {% if user_rating %}
-        Rating Anda: <strong style="color:#f5c518">{{ user_rating }} ⭐</strong>
+        Rating Anda: <strong style="color:var(--gold)">{{ user_rating }} <i class="bi bi-star-fill"></i></strong>
       {% else %}
         Beri Rating Film Ini:
       {% endif %}
@@ -92,7 +96,8 @@
       <div class="stars" data-selected="{{ user_rating or 0 }}">
         {% for half in range(1,11) %}
           {% set val = half * 0.5 %}
-          <span class="star-half {% if user_rating and val <= user_rating %}star-half--filled{% endif %}" data-val="{{ val }}">
+          <span class="star-half {% if user_rating and val <= user_rating %}star-half--filled{% endif %}"
+                data-val="{{ val }}">
             {% if half % 2 == 1 %}
               <i class="bi bi-star-half"></i>
             {% else %}
@@ -101,7 +106,7 @@
           </span>
         {% endfor %}
       </div>
-      <div class="rating-actions" style="margin-top:12px">
+      <div class="rating-actions">
         <button type="submit" class="btn btn-black btn-sm"><i class="bi bi-check"></i> Simpan Rating</button>
         {% if user_rating %}
           <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm">
@@ -115,54 +120,14 @@
   {# ── SIMILAR FILMS ───────────────────────────────────────────────── #}
   {% if similar %}
   <div class="similar-section">
-    <h2 class="similar-title">Film Serupa</h2>
-    <div class="film-row" id="similar-row">
-      {% for m in similar %}
-        {% set g0 = m.genre.replace('|',',').split(',')[0].strip() if m.genre and m.genre != 'nan' else '' %}
-        <article class="fcard">
-          <a href="{{ url_for('movie_detail', movie_id=m.movieId) }}" style="display:block;color:inherit">
-            <div class="fcard-poster">
-              <div class="fcard-bg" data-genre="{{ g0 }}" style="background:var(--k)">
-                <div class="fcard-bg-title">{{ m.title }}</div>
-                {% if m.year and m.year not in ('nan','') %}<div class="fcard-bg-year">{{ m.year }}</div>{% endif %}
-                <div class="fcard-bg-icon"><i class="bi bi-film"></i></div>
-              </div>
-              <div class="fcard-colorbar" data-genre="{{ g0 }}"></div>
-              <div class="fcard-overlay">
-                <div class="fcard-rating"><i class="bi bi-star-fill"></i> {{ "%.1f"|format(m.rating|float) }}</div>
-                {% if g0 %}<div class="fcard-genre-label">{{ g0 }}</div>{% endif %}
-              </div>
-            </div>
-            <div class="fcard-label">
-              <div class="fcard-name">{{ m.title }}</div>
-              <div class="fcard-meta">{{ m.year if m.year and m.year not in ('nan','') else '' }}</div>
-            </div>
-          </a>
-        </article>
+    <h2 class="similar-title"><i class="bi bi-grid"></i> Film Serupa</h2>
+    <div class="film-row">
+      {% for movie in similar %}
+        {% include '_movie_card.html' %}
       {% endfor %}
     </div>
   </div>
   {% endif %}
 
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-/* Poster background */
-const poster = document.getElementById('detail-poster');
-if (poster) {
-  const col = GENRE_COLORS['{{ genre0 }}'.toLowerCase()] || '#1a1a1a';
-  poster.style.background = col;
-}
-
-/* Similar row card colors */
-applyCardColors(document.getElementById('similar-row'));
-
-/* Star rating with confetti on submit */
-document.getElementById('rate-form')?.addEventListener('submit', (e) => {
-  const rating = parseFloat(document.getElementById('selected-rating').value);
-  if (rating && rating >= 3) launchConfetti();
-});
-</script>
 {% endblock %}

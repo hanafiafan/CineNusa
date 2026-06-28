@@ -7,7 +7,10 @@
   <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:24px">
     <div style="flex:1">
       <h1 class="page-title"><i class="bi bi-stars"></i> Rekomendasi Personal</h1>
-      <p class="page-sub">Berdasarkan <strong>{{ n_rated }} film</strong> yang Anda rating — dipersonalisasi dengan SVD + Content-Based Filtering</p>
+      <p class="page-sub">
+        Berdasarkan <strong>{{ n_rated }} film</strong> yang Anda rating —
+        dipersonalisasi dengan SVD Collaborative Filtering + Content-Based Filtering
+      </p>
     </div>
     <a href="{{ url_for('clear_ratings') }}" class="btn btn-danger btn-sm"
        onclick="return confirm('Hapus semua rating?')" style="align-self:center">
@@ -15,53 +18,33 @@
     </a>
   </div>
 
-  {# Algorithm badge #}
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:32px">
-    <div style="background:var(--k);color:var(--y);border:var(--brd);border-radius:999px;padding:6px 16px;font-size:.75rem;font-weight:700;box-shadow:var(--sh);letter-spacing:.04em">
+  {# Algorithm badges #}
+  <div class="algo-badges">
+    <div class="algo-badge cyan">
       <i class="bi bi-cpu-fill"></i> SVD Collaborative Filtering
     </div>
-    <div style="background:var(--w);border:var(--brd);border-radius:999px;padding:6px 16px;font-size:.75rem;font-weight:700;box-shadow:var(--sh)">
-      <i class="bi bi-diagram-3-fill"></i> TF-IDF Content-Based Filtering
+    <div class="algo-badge">
+      <i class="bi bi-diagram-3-fill"></i> TF-IDF Content-Based
     </div>
-    <div style="background:var(--y);border:var(--brd);border-radius:999px;padding:6px 16px;font-size:.75rem;font-weight:700;box-shadow:var(--sh)">
+    <div class="algo-badge gold">
       <i class="bi bi-person-check-fill"></i> {{ n_rated }} rating terproses
     </div>
   </div>
 
   {% if recs %}
-    <h2 style="font-size:1.3rem;font-weight:900;letter-spacing:-.03em;margin-bottom:16px">
-      Film yang Direkomendasikan untuk Anda
+    <h2 style="font-family:var(--font-h);font-size:1.2rem;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px">
+      <i class="bi bi-fire"></i> Film yang Direkomendasikan untuk Anda
     </h2>
-    <div class="film-grid" id="recs-grid">
-      {% for m in recs %}
-        {% set g0 = m.genre.replace('|',',').split(',')[0].strip() if m.genre and m.genre != 'nan' else '' %}
-        <article class="fcard">
-          <a href="{{ url_for('movie_detail', movie_id=m.movieId) }}" style="display:block;color:inherit">
-            <div class="fcard-poster">
-              <div class="fcard-bg" data-genre="{{ g0 }}" style="background:var(--k)">
-                <div class="fcard-bg-title">{{ m.title }}</div>
-                {% if m.year and m.year not in ('nan','') %}<div class="fcard-bg-year">{{ m.year }}</div>{% endif %}
-                <div class="fcard-bg-icon"><i class="bi bi-film"></i></div>
-              </div>
-              <div class="fcard-colorbar" data-genre="{{ g0 }}"></div>
-              <div class="fcard-overlay">
-                <div class="fcard-rating"><i class="bi bi-star-fill"></i> {{ "%.1f"|format(m.rating|float) }}</div>
-                {% if g0 %}<div class="fcard-genre-label">{{ g0 }}</div>{% endif %}
-              </div>
-            </div>
-            <div class="fcard-label">
-              <div class="fcard-name">{{ m.title }}</div>
-              <div class="fcard-meta">{{ m.year if m.year and m.year not in ('nan','') else '' }}</div>
-            </div>
-          </a>
-        </article>
+    <div class="film-grid">
+      {% for movie in recs %}
+        {% include '_movie_card.html' %}
       {% endfor %}
     </div>
   {% else %}
     <div class="empty-state">
-      <i class="bi bi-emoji-frown"></i>
-      <p>Belum ada rekomendasi. Coba rating lebih banyak film untuk hasil yang lebih baik.</p>
-      <a href="{{ url_for('swipe') }}" class="btn btn-black">
+      <i class="bi bi-stars"></i>
+      <p>Belum ada rekomendasi. Rating lebih banyak film untuk hasil yang lebih personal.</p>
+      <a href="{{ url_for('swipe') }}" class="btn btn-yellow">
         <i class="bi bi-hand-index-thumb"></i> Mulai Swipe Rating
       </a>
     </div>
@@ -70,8 +53,10 @@
   <hr class="section-divider">
 
   {# Rated films list #}
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-    <h2 style="font-size:1.2rem;font-weight:900;letter-spacing:-.03em">Film yang Anda Rating ({{ n_rated }})</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+    <h2 style="font-family:var(--font-h);font-size:1.15rem;font-weight:700">
+      Film yang Anda Rating ({{ n_rated }})
+    </h2>
     <a href="{{ url_for('swipe') }}" class="btn btn-yellow btn-sm">
       <i class="bi bi-hand-index-thumb"></i> Rating Lebih Banyak
     </a>
@@ -79,31 +64,26 @@
 
   <div class="rated-list">
     {% for m in rated %}
-      <div class="rated-item">
-        <div style="width:36px;height:36px;border-radius:6px;border:1.5px solid var(--k);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem"
-             data-rated-poster="{{ m.genre.replace('|',',').split(',')[0].strip() if m.genre and m.genre != 'nan' else '' }}">
-          🎬
+    <div class="rated-item">
+      <div style="width:36px;height:52px;border-radius:5px;flex-shrink:0;overflow:hidden;background:var(--surf3)">
+        {% if m.poster_url and m.poster_url not in ('nan','','None') %}
+        <img src="{{ m.poster_url }}" alt="{{ m.title }}"
+             style="width:100%;height:100%;object-fit:cover">
+        {% else %}
+        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:.85rem">
+          <i class="bi bi-film"></i>
         </div>
-        <a href="{{ url_for('movie_detail', movie_id=m.movieId) }}" class="rated-name">
-          {{ m.title }}
-          {% if m.year and m.year not in ('nan','') %}<small>({{ m.year }})</small>{% endif %}
-        </a>
-        <div class="rated-star"><i class="bi bi-star-fill"></i> {{ m.user_rating }}</div>
-        <a href="{{ url_for('movie_detail', movie_id=m.movieId) }}" class="btn btn-outline btn-sm">Ubah</a>
+        {% endif %}
       </div>
+      <a href="{{ url_for('movie_detail', movie_id=m.movieId) }}" class="rated-name">
+        {{ m.title }}
+        {% if m.year and m.year not in ('nan','') %}<small>({{ m.year }})</small>{% endif %}
+      </a>
+      <div class="rated-star"><i class="bi bi-star-fill"></i> {{ m.user_rating }}</div>
+      <a href="{{ url_for('movie_detail', movie_id=m.movieId) }}" class="btn btn-outline btn-sm">Ubah</a>
+    </div>
     {% endfor %}
   </div>
 
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-applyCardColors(document.getElementById('recs-grid'));
-document.querySelectorAll('[data-rated-poster]').forEach(el => {
-  const col = GENRE_COLORS[el.dataset.ratedPoster.toLowerCase()] || '#1a1a1a';
-  el.style.background = col;
-  el.style.color = 'rgba(255,255,255,.3)';
-});
-</script>
 {% endblock %}

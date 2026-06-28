@@ -1,32 +1,36 @@
-/* CineNusa — main.js | Neubrutalism × Full Animation */
+/* CineNusa — main.js | Netflix × AI Tech Theme */
 'use strict';
 
 /* ══════════════════════════════════════════════════════════════════════
-   GENRE COLORS
+   GENRE COLORS (for buildCard placeholders)
    ══════════════════════════════════════════════════════════════════════ */
 const GENRE_COLORS = {
-  action:    '#CC2200',
-  adventure: '#CC6600',
-  animation: '#7B2FBE',
-  biography: '#0A7A5A',
-  comedy:    '#1A8C3A',
-  crime:     '#6A1A8C',
-  drama:     '#2C3E60',
-  family:    '#1A5C9A',
-  fantasy:   '#A03000',
-  history:   '#5D4037',
-  horror:    '#8B0000',
-  music:     '#AD1457',
-  romance:   '#C0156E',
-  'sci-fi':  '#006A80',
-  thriller:  '#8C5200',
-  war:       '#455A64',
-  musical:   '#880E4F',
-  mystery:   '#4A148C',
+  action:    '#7a1a10',
+  adventure: '#7a4010',
+  animation: '#4a1a7a',
+  biography: '#0a4a3a',
+  comedy:    '#0a4a1a',
+  crime:     '#3a0a5a',
+  drama:     '#1a2040',
+  family:    '#0a3a6a',
+  fantasy:   '#5a1a00',
+  history:   '#3a2a20',
+  horror:    '#5a0000',
+  music:     '#6a0a30',
+  romance:   '#6a0a40',
+  'sci-fi':  '#00406a',
+  thriller:  '#5a3200',
+  war:       '#2a3540',
+  musical:   '#5a0a30',
+  mystery:   '#2a0a5a',
 };
 
 function genreColor(genre) {
-  return GENRE_COLORS[(genre || '').toLowerCase().trim()] || '#1a1a1a';
+  return GENRE_COLORS[(genre || '').toLowerCase().trim()] || '#18182a';
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -36,8 +40,19 @@ window.addEventListener('load', () => {
   const loader = document.getElementById('loader');
   if (!loader) return;
   setTimeout(() => loader.classList.add('gone'), 900);
-  setTimeout(() => loader.remove(), 1450);
+  setTimeout(() => loader.remove(), 1500);
 });
+
+/* ══════════════════════════════════════════════════════════════════════
+   NAVBAR — scrolled state
+   ══════════════════════════════════════════════════════════════════════ */
+(function() {
+  const nav = document.getElementById('nav');
+  if (!nav) return;
+  const toggle = () => nav.classList.toggle('scrolled', window.scrollY > 50);
+  toggle();
+  window.addEventListener('scroll', toggle, { passive: true });
+})();
 
 /* ══════════════════════════════════════════════════════════════════════
    CUSTOM CURSOR
@@ -48,25 +63,17 @@ window.addEventListener('load', () => {
   if (!dot || !ring) return;
 
   let mx = -200, my = -200, rx = -200, ry = -200;
-  let raf;
 
   document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
   document.addEventListener('mousedown', () => document.body.classList.add('cursor-click'));
   document.addEventListener('mouseup',   () => document.body.classList.remove('cursor-click'));
 
-  function interactiveEls() {
-    return 'a,button,input,select,textarea,[role="button"],.fcard,.mood-btn,.swipe-btn,.swipe-card';
-  }
-
+  const interactiveEls = 'a,button,input,select,textarea,[role="button"],.nf-card,.fcard,.mood-chip,.swipe-btn';
   document.addEventListener('mouseover', e => {
-    if (e.target.closest(interactiveEls())) {
-      document.body.classList.add('cursor-hover');
-    }
+    if (e.target.closest(interactiveEls)) document.body.classList.add('cursor-hover');
   });
   document.addEventListener('mouseout', e => {
-    if (e.target.closest(interactiveEls())) {
-      document.body.classList.remove('cursor-hover');
-    }
+    if (e.target.closest(interactiveEls)) document.body.classList.remove('cursor-hover');
   });
 
   function lerp(a, b, t) { return a + (b - a) * t; }
@@ -74,112 +81,132 @@ window.addEventListener('load', () => {
   function loop() {
     dot.style.left  = mx + 'px';
     dot.style.top   = my + 'px';
-    rx = lerp(rx, mx, 0.14);
-    ry = lerp(ry, my, 0.14);
+    rx = lerp(rx, mx, 0.13);
+    ry = lerp(ry, my, 0.13);
     ring.style.left = rx + 'px';
     ring.style.top  = ry + 'px';
-    raf = requestAnimationFrame(loop);
+    requestAnimationFrame(loop);
   }
   loop();
 })();
 
 /* ══════════════════════════════════════════════════════════════════════
-   CONFETTI
+   NEURAL NETWORK CANVAS (hero background decoration)
    ══════════════════════════════════════════════════════════════════════ */
-function launchConfetti() {
-  const canvas = document.getElementById('confetti-canvas');
+(function() {
+  const canvas = document.getElementById('neural-canvas');
   if (!canvas) return;
+
   const ctx = canvas.getContext('2d');
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
+  const N   = 32;
+  const DIST = 170;
+  const SPD  = 0.18;
+  let W, H, nodes;
 
-  const colors = ['#FFE500','#0D0D0D','#FF4444','#22CC55','#00BBDD','#FF69B4'];
-  const pieces = Array.from({ length: 120 }, () => ({
-    x:  Math.random() * canvas.width,
-    y:  -10 - Math.random() * 150,
-    r:  4 + Math.random() * 6,
-    d:  2 + Math.random() * 4,
-    vx: (Math.random() - .5) * 3,
-    color: colors[Math.floor(Math.random() * colors.length)],
-    rot: Math.random() * 360,
-    rotV: (Math.random() - .5) * 6,
-    shape: Math.random() > .5 ? 'rect' : 'circle',
-  }));
-
-  let frame = 0;
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    pieces.forEach(p => {
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot * Math.PI / 180);
-      ctx.fillStyle = p.color;
-      if (p.shape === 'rect') ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
-      else { ctx.beginPath(); ctx.arc(0, 0, p.r / 2, 0, Math.PI * 2); ctx.fill(); }
-      ctx.restore();
-      p.y  += p.d;
-      p.x  += p.vx;
-      p.rot += p.rotV;
-      if (p.y > canvas.height + 20) p.y = -20;
-    });
-    frame++;
-    if (frame < 200) requestAnimationFrame(draw);
-    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  function resize() {
+    W = canvas.width  = canvas.offsetWidth  || window.innerWidth;
+    H = canvas.height = canvas.offsetHeight || window.innerHeight;
   }
+
+  function init() {
+    resize();
+    nodes = Array.from({ length: N }, () => ({
+      x:  Math.random() * W,
+      y:  Math.random() * H,
+      vx: (Math.random() - 0.5) * SPD,
+      vy: (Math.random() - 0.5) * SPD,
+      r:  1.2 + Math.random() * 1.8,
+    }));
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    /* move */
+    nodes.forEach(n => {
+      n.x += n.vx; n.y += n.vy;
+      if (n.x < 0 || n.x > W) n.vx *= -1;
+      if (n.y < 0 || n.y > H) n.vy *= -1;
+    });
+
+    /* edges */
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx   = nodes[i].x - nodes[j].x;
+        const dy   = nodes[i].y - nodes[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < DIST) {
+          const a = (1 - dist / DIST) * 0.45;
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.strokeStyle = `rgba(0,212,255,${a})`;
+          ctx.lineWidth   = 0.7;
+          ctx.stroke();
+        }
+      }
+    }
+
+    /* nodes */
+    nodes.forEach(n => {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,212,255,0.75)';
+      ctx.fill();
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => {
+    resize();
+    nodes.forEach(n => {
+      n.x = Math.min(n.x, W);
+      n.y = Math.min(n.y, H);
+    });
+  });
+
+  init();
   draw();
-}
+})();
 
 /* ══════════════════════════════════════════════════════════════════════
-   CARD COLORS (neubrutalism version)
-   Apply genre background color to .fcard-bg and .fcard-colorbar elements
-   ══════════════════════════════════════════════════════════════════════ */
-function applyCardColors(root) {
-  const scope = root || document;
-  scope && scope.querySelectorAll('.fcard-bg[data-genre]').forEach(el => {
-    el.style.background = genreColor(el.dataset.genre);
-  });
-  scope && scope.querySelectorAll('.fcard-colorbar[data-genre]').forEach(el => {
-    el.style.background = genreColor(el.dataset.genre);
-  });
-}
-
-/* Run on every page */
-applyCardColors();
-
-/* ══════════════════════════════════════════════════════════════════════
-   BUILD CARD HTML (for JS-rendered rows)
+   BUILD CARD HTML (used by lazy rows + mood filter)
    ══════════════════════════════════════════════════════════════════════ */
 function buildCard(m) {
   const yr    = (m.year && m.year !== 'nan' && m.year !== 'None') ? m.year : '';
   const rat   = parseFloat(m.rating || 0).toFixed(1);
   const genre = (m.genre || '').split(',')[0].trim();
-  const col   = genreColor(genre);
+  const hasPoster = m.poster_url &&
+                    m.poster_url !== 'nan' &&
+                    m.poster_url !== 'None' &&
+                    String(m.poster_url).startsWith('http');
+  const short = m.title.length > 24 ? m.title.slice(0, 24) + '…' : m.title;
+
+  const posterHtml = hasPoster
+    ? `<img src="${escHtml(m.poster_url)}" alt="${escHtml(m.title)}" loading="lazy" onerror="this.style.display='none'">`
+    : `<div class="nf-poster-ph"><i class="bi bi-film"></i><span>${escHtml(short)}</span></div>`;
+
   return `
-    <article class="fcard">
-      <a href="/movie/${m.movieId}" style="display:block;color:inherit">
-        <div class="fcard-poster">
-          <div class="fcard-bg" style="background:${escHtml(col)}">
-            <div class="fcard-bg-title">${escHtml(m.title)}</div>
-            ${yr ? `<div class="fcard-bg-year">${escHtml(yr)}</div>` : ''}
-            <div class="fcard-bg-icon"><i class="bi bi-film"></i></div>
-          </div>
-          <div class="fcard-colorbar" style="background:${escHtml(col)}"></div>
-          <div class="fcard-overlay">
-            <div class="fcard-rating"><i class="bi bi-star-fill"></i> ${escHtml(rat)}</div>
-            ${genre ? `<div class="fcard-genre-label">${escHtml(genre)}</div>` : ''}
-          </div>
+    <article class="nf-card">
+      <a href="/movie/${escHtml(String(m.movieId))}" class="nf-card-link">
+        <div class="nf-card-poster">
+          ${posterHtml}
+          <div class="nf-card-rating"><i class="bi bi-star-fill"></i> ${escHtml(rat)}</div>
         </div>
-        <div class="fcard-label">
-          <div class="fcard-name">${escHtml(m.title)}</div>
-          <div class="fcard-meta">${escHtml(yr)}</div>
+        <div class="nf-card-info">
+          <div class="nf-card-title">${escHtml(m.title)}</div>
+          <div class="nf-card-meta">
+            ${yr ? `<span>${escHtml(yr)}</span>` : ''}
+            ${genre ? `<span class="nf-card-genre">${escHtml(genre)}</span>` : ''}
+          </div>
         </div>
       </a>
     </article>`;
 }
 
-function escHtml(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+/* Keep applyCardColors as no-op for backward compat */
+function applyCardColors(root) { /* no-op — dark theme uses genre colors via CSS */ }
 
 /* ══════════════════════════════════════════════════════════════════════
    DRAG-TO-SCROLL on film rows
@@ -204,7 +231,7 @@ document.querySelectorAll('.film-row').forEach(row => {
 });
 
 /* ══════════════════════════════════════════════════════════════════════
-   NAV AUTOCOMPLETE (rich preview)
+   NAV AUTOCOMPLETE
    ══════════════════════════════════════════════════════════════════════ */
 (function() {
   const input = document.getElementById('nav-q');
@@ -230,13 +257,13 @@ document.querySelectorAll('.film-row').forEach(row => {
             const yr  = (m.year && m.year !== 'nan') ? m.year : '';
             return `<div class="ac-item" data-id="${m.movieId}" tabindex="0">
               <div class="ac-item-poster" style="background:${escHtml(col)}">
-                <span style="font-size:.9rem;opacity:.5">🎬</span>
+                <i class="bi bi-film"></i>
               </div>
               <div class="ac-item-info">
                 <div class="ac-item-title">${escHtml(m.title)}</div>
                 <div class="ac-item-meta">${yr}${yr && g ? ' · ' : ''}${escHtml(g)}</div>
               </div>
-              <span class="ac-item-rating">⭐ ${escHtml(rat)}</span>
+              <span class="ac-item-rating"><i class="bi bi-star-fill"></i> ${escHtml(rat)}</span>
             </div>`;
           }).join('');
           box.classList.add('open');
@@ -320,10 +347,6 @@ document.querySelectorAll('.flash').forEach(el => {
    PAGE TRANSITION (fade on link click)
    ══════════════════════════════════════════════════════════════════════ */
 (function() {
-  const style = document.createElement('style');
-  style.textContent = '.page-fade-out { animation: pageFadeOut .2s ease forwards } @keyframes pageFadeOut { to { opacity:0; transform:translateY(-6px) } }';
-  document.head.appendChild(style);
-
   document.addEventListener('click', e => {
     const a = e.target.closest('a[href]');
     if (!a) return;
@@ -337,61 +360,32 @@ document.querySelectorAll('.flash').forEach(el => {
 })();
 
 /* ══════════════════════════════════════════════════════════════════════
-   SCROLL REVEAL (fcard entrance animation)
+   SCROLL REVEAL — nf-card + fcard entrance animation
    ══════════════════════════════════════════════════════════════════════ */
 (function() {
-  const style = document.createElement('style');
-  style.textContent = `
-    .fcard { opacity: 0; transform: translateY(18px); transition: opacity .35s ease, transform .35s ease }
-    .fcard.visible { opacity: 1; transform: none }
-  `;
-  document.head.appendChild(style);
-
   const io = new IntersectionObserver(entries => {
     entries.forEach(e => {
-      if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        /* override animation: keep opacity 1 */
+        e.target.style.opacity = '1';
+        e.target.style.animation = 'none';
+        io.unobserve(e.target);
+      }
     });
-  }, { rootMargin: '0px 0px -40px 0px', threshold: 0.1 });
+  }, { rootMargin: '0px 0px -30px 0px', threshold: 0.05 });
 
   function observeCards() {
-    document.querySelectorAll('.fcard:not(.visible)').forEach(c => io.observe(c));
+    document.querySelectorAll('.nf-card:not(.visible), .fcard:not(.visible)').forEach(c => {
+      c.style.opacity = '0';
+      io.observe(c);
+    });
   }
   observeCards();
 
-  /* Re-observe when new cards are added (lazy rows) */
-  const mo = new MutationObserver(observeCards);
-  mo.observe(document.body, { childList: true, subtree: true });
+  /* Re-observe when new cards injected (lazy rows) */
+  new MutationObserver(observeCards).observe(document.body, { childList: true, subtree: true });
 })();
-
-/* ══════════════════════════════════════════════════════════════════════
-   TICKER duplicate for seamless animation
-   ══════════════════════════════════════════════════════════════════════ */
-(function() {
-  const ticker = document.getElementById('ticker');
-  if (!ticker) return;
-  /* Items already duplicated in template for seamless loop */
-})();
-
-/* ══════════════════════════════════════════════════════════════════════
-   FCARD hover tilt (subtle 3D effect on desktop)
-   ══════════════════════════════════════════════════════════════════════ */
-document.addEventListener('mousemove', e => {
-  const card = e.target.closest('.fcard');
-  if (!card) return;
-  const rect = card.getBoundingClientRect();
-  const cx = rect.left + rect.width  / 2;
-  const cy = rect.top  + rect.height / 2;
-  const dx = (e.clientX - cx) / rect.width;
-  const dy = (e.clientY - cy) / rect.height;
-  card.querySelector('.fcard-inner') && (card.querySelector('.fcard-inner').style.transform =
-    `translate(-3px,-3px) rotateX(${-dy * 5}deg) rotateY(${dx * 5}deg)`);
-});
-document.addEventListener('mouseleave', e => {
-  const card = e.target.closest('.fcard');
-  if (card && card.querySelector('.fcard-inner')) {
-    card.querySelector('.fcard-inner').style.transform = '';
-  }
-}, true);
 
 /* ══════════════════════════════════════════════════════════════════════
    IMG FADE-IN
@@ -403,3 +397,23 @@ document.querySelectorAll('img[loading="lazy"]').forEach(img => {
   img.addEventListener('load', show);
   if (img.complete) show();
 });
+
+/* ══════════════════════════════════════════════════════════════════════
+   SWIPE PAGE touch support
+   ══════════════════════════════════════════════════════════════════════ */
+(function() {
+  const arena = document.getElementById('swipe-arena');
+  if (!arena) return;
+  let startX = null;
+  arena.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+  arena.addEventListener('touchend', e => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    startX = null;
+    if (Math.abs(dx) < 50) return;
+    const top = arena.querySelector('.is-top');
+    if (!top) return;
+    if (dx > 0) top.querySelector('.swipe-btn.like')?.click();
+    else        top.querySelector('.swipe-btn.skip')?.click();
+  });
+})();

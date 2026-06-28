@@ -3,101 +3,93 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}CineNusa{% endblock %} — CineNusa</title>
+  <title>{% block title %}CineNusa{% endblock %} — Film Indonesia</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   {% block head %}{% endblock %}
 </head>
 <body>
 
-<!-- Loading Screen -->
+<!-- Loader -->
 <div id="loader">
-  <div class="loader-logo"><i class="bi bi-camera-reels-fill"></i> CineNusa</div>
-  <div class="loader-bar"><div class="loader-fill"></div></div>
-  <p style="font-size:.75rem;color:rgba(0,0,0,.5);font-family:'Inter',sans-serif;margin-top:8px">Memuat pengalaman sinema terbaik…</p>
+  <div class="loader-inner">
+    <div class="loader-logo">CINE<span>NUSA</span></div>
+    <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+    <div class="loader-label">Memuat AI Recommender<span class="loader-dots"></span></div>
+  </div>
 </div>
 
 <!-- Custom Cursor -->
-<div class="cursor-dot" id="cursor-dot"></div>
-<div class="cursor-ring" id="cursor-ring"></div>
-
-<!-- Confetti Canvas -->
-<canvas id="confetti-canvas"></canvas>
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
 
 <!-- Flash Messages -->
-{% with msgs = get_flashed_messages(with_categories=true) %}
-  {% if msgs %}
-    <div class="flash-stack" id="flash-stack">
-      {% for cat, msg in msgs %}
-        <div class="flash flash--{{ cat }}">
-          <span>{{ msg }}</span>
-          <button onclick="this.closest('.flash').remove()">×</button>
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flash-container">
+  {% for cat, msg in messages %}
+  <div class="flash flash-{{ cat }}">
+    <i class="bi {% if cat == 'success' %}bi-check-circle{% elif cat == 'danger' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %}"></i>
+    {{ msg }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 {% endwith %}
 
 <!-- Navigation -->
-<nav class="nav" id="nav">
+<nav id="nav" class="nav-bar">
   <div class="nav-inner">
-    <a href="{{ url_for('index') }}" class="nav-logo">CineNusa</a>
+    <a href="{{ url_for('index') }}" class="nav-logo">CINE<span>NUSA</span></a>
 
     <div class="nav-links">
-      <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint=='index' %}active{% endif %}">
-        <i class="bi bi-house"></i> Beranda
-      </a>
-      <a href="{{ url_for('search') }}" class="nav-link {% if request.endpoint in ('search','genre_page') %}active{% endif %}">
-        <i class="bi bi-grid"></i> Jelajah
-      </a>
-      <a href="{{ url_for('swipe') }}" class="nav-link {% if request.endpoint=='swipe' %}active{% endif %}">
-        <i class="bi bi-hand-index-thumb"></i> Swipe
-      </a>
-      <a href="{{ url_for('compare') }}" class="nav-link {% if request.endpoint=='compare' %}active{% endif %}">
-        <i class="bi bi-layout-split"></i> Bandingkan
-      </a>
-    </div>
-
-    <!-- Live search -->
-    <div class="nav-search">
-      <div class="nav-search-form">
-        <input type="text" id="nav-q" placeholder="Cari film…" autocomplete="off" spellcheck="false"
-               value="{{ request.args.get('q','') }}">
-        <button type="button" id="nav-search-btn"><i class="bi bi-search"></i></button>
-      </div>
-      <div class="ac-box" id="autocomplete-box"></div>
+      <a href="{{ url_for('index') }}"
+         class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Beranda</a>
+      <a href="{{ url_for('recommendations') }}"
+         class="nav-link {% if request.endpoint == 'recommendations' %}active{% endif %}">Untukmu</a>
+      <a href="{{ url_for('search') }}"
+         class="nav-link {% if request.endpoint in ('search','genre_page') %}active{% endif %}">Jelajahi</a>
+      <a href="{{ url_for('compare') }}"
+         class="nav-link {% if request.endpoint == 'compare' %}active{% endif %}">Bandingkan</a>
     </div>
 
     <div class="nav-right">
-      {% if n_rated > 0 %}
-        <a href="{{ url_for('recommendations') }}" class="nav-btn highlight">
-          <i class="bi bi-stars"></i> Rekomendasi <em>{{ n_rated }}</em>
-        </a>
-      {% else %}
-        <a href="{{ url_for('recommendations') }}" class="nav-btn">
-          <i class="bi bi-stars"></i> Rekomendasi
-        </a>
-      {% endif %}
+      <div class="nav-search-wrap">
+        <input type="text" id="nav-q" class="nav-search"
+               placeholder="Cari film…" autocomplete="off" spellcheck="false">
+        <button id="nav-search-btn" class="nav-search-btn" aria-label="Cari">
+          <i class="bi bi-search"></i>
+        </button>
+        <div class="autocomplete-box" id="autocomplete-box"></div>
+      </div>
+      <a href="{{ url_for('swipe') }}" class="nav-ai-btn" title="Mode Swipe AI">
+        <i class="bi bi-stars"></i>
+      </a>
     </div>
   </div>
 </nav>
 
-<!-- Page Content -->
-{% block content %}{% endblock %}
+<!-- Main Content -->
+<main id="main">
+  {% block content %}{% endblock %}
+</main>
 
 <!-- Footer -->
 <footer class="site-footer">
   <div class="footer-inner">
-    <span class="footer-brand"><i class="bi bi-camera-reels-fill"></i> CineNusa</span>
-    <span style="opacity:.4">·</span>
-    <span>Sistem Rekomendasi Film Indonesia</span>
-    <span style="opacity:.4">·</span>
-    <span>SVD Collaborative Filtering + Content-Based</span>
-    <span style="margin-left:auto;opacity:.5">SENATIB 2026</span>
+    <div class="footer-logo">CINE<span>NUSA</span></div>
+    <div class="footer-tagline">Sistem Rekomendasi Film Indonesia Berbasis AI</div>
+    <div class="footer-meta">
+      <span>Hybrid AI · Content-Based + SVD Collaborative</span>
+      <span class="footer-sep">·</span>
+      <span>1.272 Film Indonesia</span>
+      <span class="footer-sep">·</span>
+      <span>SENATIB 2026</span>
+    </div>
   </div>
 </footer>
 

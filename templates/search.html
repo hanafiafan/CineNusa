@@ -11,11 +11,11 @@
 
   <h1 class="page-title">
     {% if genre %}
-      <span style="background:var(--y);padding:0 8px;border-radius:6px">{{ genre }}</span>
+      <i class="bi bi-grid"></i> {{ genre }}
     {% elif query %}
-      Hasil: "{{ query }}"
+      <i class="bi bi-search"></i> Hasil: "{{ query }}"
     {% else %}
-      🎬 Jelajah Film
+      <i class="bi bi-grid"></i> Jelajah Film
     {% endif %}
   </h1>
   <p class="page-sub">
@@ -40,52 +40,18 @@
   {# Genre pills #}
   <div class="genre-pills">
     <a href="{{ url_for('search') }}"
-       class="gpill-sm {% if not genre and not query %}active{% endif %}">
-      Semua
-    </a>
+       class="gpill-sm {% if not genre and not query %}active{% endif %}">Semua</a>
     {% for g in genres %}
-      <a href="{{ url_for('genre_page', genre_name=g) }}"
-         class="gpill-sm {% if genre==g %}active{% endif %}"
-         style="{% if genre==g %}background:{{ 'var(--g-' + g.lower().replace(' ','-') + ',var(--k))' }};color:#fff;{% endif %}">
-        {{ g }}
-      </a>
+    <a href="{{ url_for('genre_page', genre_name=g) }}"
+       class="gpill-sm {% if genre==g %}active{% endif %}">{{ g }}</a>
     {% endfor %}
-  </div>
-
-  {# Live preview panel #}
-  <div id="search-preview" style="display:none;position:fixed;right:24px;top:80px;width:300px;z-index:400;background:var(--w);border:var(--brd);border-radius:var(--r);box-shadow:var(--sh-xl);overflow:hidden">
-    <div style="padding:12px 14px;border-bottom:var(--brd);font-weight:800;font-size:.82rem;display:flex;align-items:center;justify-content:space-between">
-      <span>Preview Hasil</span>
-      <button onclick="document.getElementById('search-preview').style.display='none'" style="cursor:none;font-size:1rem">×</button>
-    </div>
-    <div id="search-preview-list" style="max-height:400px;overflow-y:auto"></div>
   </div>
 
   {# Results #}
   {% if results %}
-    <div class="film-grid" id="results-grid">
-      {% for m in results %}
-        {% set g0 = m.genre.replace('|',',').split(',')[0].strip() if m.genre and m.genre != 'nan' else '' %}
-        <article class="fcard">
-          <a href="{{ url_for('movie_detail', movie_id=m.movieId) }}" style="display:block;color:inherit">
-            <div class="fcard-poster">
-              <div class="fcard-bg" data-genre="{{ g0 }}" style="background:var(--k)">
-                <div class="fcard-bg-title">{{ m.title }}</div>
-                {% if m.year and m.year not in ('nan','') %}<div class="fcard-bg-year">{{ m.year }}</div>{% endif %}
-                <div class="fcard-bg-icon"><i class="bi bi-film"></i></div>
-              </div>
-              <div class="fcard-colorbar" data-genre="{{ g0 }}"></div>
-              <div class="fcard-overlay">
-                <div class="fcard-rating"><i class="bi bi-star-fill"></i> {{ "%.1f"|format(m.rating|float) }}</div>
-                {% if g0 %}<div class="fcard-genre-label">{{ g0 }}</div>{% endif %}
-              </div>
-            </div>
-            <div class="fcard-label">
-              <div class="fcard-name">{{ m.title }}</div>
-              <div class="fcard-meta">{{ m.year if m.year and m.year not in ('nan','') else '' }}</div>
-            </div>
-          </a>
-        </article>
+    <div class="film-grid">
+      {% for movie in results %}
+        {% include '_movie_card.html' %}
       {% endfor %}
     </div>
   {% else %}
@@ -101,51 +67,21 @@
 
 {% block scripts %}
 <script>
-applyCardColors(document.getElementById('results-grid'));
-
-/* Live search preview */
+/* Live search preview on search page */
 const searchInput = document.getElementById('search-main-input');
-const preview     = document.getElementById('search-preview');
-const previewList = document.getElementById('search-preview-list');
 let previewTimer;
 
 if (searchInput) {
   searchInput.addEventListener('input', () => {
     clearTimeout(previewTimer);
     const q = searchInput.value.trim();
-    if (q.length < 2) { preview.style.display = 'none'; return; }
+    if (q.length < 2) return;
     previewTimer = setTimeout(() => {
       fetch(`/api/search?q=${encodeURIComponent(q)}&n=6`)
         .then(r => r.json())
-        .then(data => {
-          if (!data.length) { preview.style.display = 'none'; return; }
-          previewList.innerHTML = data.map(m => {
-            const g = (m.genre||'').split(',')[0].trim();
-            const col = GENRE_COLORS[g.toLowerCase()] || '#333';
-            return `<a href="/movie/${m.movieId}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1.5px solid #f0f0f0;font-size:.83rem;color:var(--k);text-decoration:none;transition:background .12s" onmouseover="this.style.background='var(--yl)'" onmouseout="this.style.background=''">
-              <div style="width:32px;height:48px;border-radius:4px;background:${col};border:1.5px solid var(--k);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:rgba(255,255,255,.4)">🎬</div>
-              <div style="flex:1;min-width:0">
-                <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(m.title)}</div>
-                <div style="font-size:.72rem;color:var(--dim)">${m.year||''} ${g ? '· '+g : ''}</div>
-              </div>
-              <span style="color:#f5c518;font-weight:800;font-size:.78rem">⭐ ${parseFloat(m.rating||0).toFixed(1)}</span>
-            </a>`;
-          }).join('');
-          preview.style.display = 'block';
-        })
-        .catch(() => preview.style.display = 'none');
-    }, 220);
+        .catch(() => []);
+    }, 280);
   });
-
-  document.addEventListener('click', e => {
-    if (!preview.contains(e.target) && e.target !== searchInput) {
-      preview.style.display = 'none';
-    }
-  });
-}
-
-function escHtml(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
 {% endblock %}
