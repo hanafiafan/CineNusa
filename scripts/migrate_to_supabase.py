@@ -26,7 +26,31 @@ except ImportError:
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
-from database.supabase_client import get_client, upsert_movies
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / ".env")
+except ImportError:
+    pass
+
+try:
+    from supabase import create_client
+except ImportError:
+    print("pip install supabase")
+    sys.exit(1)
+
+
+def get_service_client():
+    url = os.environ.get("SUPABASE_URL", "").strip()
+    key = (os.environ.get("SUPABASE_SERVICE_KEY") or
+           os.environ.get("SUPABASE_ANON_KEY", "")).strip()
+    if not url or not key:
+        print("Set SUPABASE_URL dan SUPABASE_SERVICE_KEY di .env")
+        sys.exit(1)
+    return create_client(url, key)
+
+
+def upsert_chunk(sb, records):
+    sb.table("movies").upsert(records, on_conflict="movie_id").execute()
 
 
 def clean_val(v):
@@ -62,11 +86,7 @@ def find_csv() -> Path:
 
 
 def main():
-    sb = get_client()
-    if not sb:
-        print("Supabase tidak terkonfigurasi.")
-        print("Set SUPABASE_URL dan SUPABASE_ANON_KEY terlebih dahulu.")
-        sys.exit(1)
+    sb = get_service_client()
 
     csv_path = find_csv()
     print(f"Membaca: {csv_path.name}")
@@ -114,9 +134,9 @@ def main():
         records.append(rec)
 
     print(f"Mengupload {len(records)} film ke Supabase...")
-    chunk = 500
+    chunk = 200
     for i in tqdm(range(0, len(records), chunk), desc="Uploading", unit="batch"):
-        upsert_movies(records[i:i+chunk])
+        upsert_chunk(sb, records[i:i+chunk])
 
     print(f"\nSelesai! {len(records)} film tersimpan di Supabase.")
     print("Jalankan server: python app.py")
