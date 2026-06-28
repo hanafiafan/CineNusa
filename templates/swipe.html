@@ -147,6 +147,16 @@ function launchConfetti() {
   setTimeout(() => { cancelAnimationFrame(raf); cvs.remove(); }, 3000);
 }
 
+/* ── Z-index stack setup ── */
+function refreshStack() {
+  const cards = getCards();
+  cards.forEach((c, i) => {
+    c.style.zIndex = Math.max(1, 5 - i);
+  });
+  if (cards[0]) cards[0].style.zIndex = 10;
+}
+refreshStack();
+
 /* ── Genre colors ── */
 function applySwipeColors() {
   arena.querySelectorAll('.swipe-card').forEach(card => {
@@ -172,6 +182,7 @@ function promoteNext() {
     return;
   }
   cards[0].classList.add('is-top');
+  refreshStack();
   cards.slice(1, 3).forEach((c, i) => {
     c.style.transform = i === 0
       ? 'rotate(2deg) translate(8px,-6px) scale(.97)'

@@ -947,13 +947,14 @@ body.cursor-click #cursor-dot {
   margin-bottom: 16px;
 }
 .swipe-card {
-  position: absolute; inset: 0;
+  position: absolute; inset: 0; z-index: 1;
   background: var(--surf2); border-radius: 16px;
   overflow: hidden; border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
   transition: transform 0.3s ease, opacity 0.3s;
   display: flex; flex-direction: column;
 }
+.swipe-card.is-top { z-index: 10; }
 .swipe-card-img {
   flex: 1; width: 100%; min-height: 0;
   background: var(--surf3);
