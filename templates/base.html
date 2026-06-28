@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CineNusa{% endblock %} — CineNusa</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loader">
+  <div class="loader-logo"><i class="bi bi-camera-reels-fill"></i> CineNusa</div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+  <p style="font-size:.75rem;color:rgba(0,0,0,.5);font-family:'Inter',sans-serif;margin-top:8px">Memuat pengalaman sinema terbaik…</p>
+</div>
+
+<!-- Custom Cursor -->
+<div class="cursor-dot" id="cursor-dot"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
+
+<!-- Confetti Canvas -->
+<canvas id="confetti-canvas"></canvas>
+
+<!-- Flash Messages -->
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% if msgs %}
+    <div class="flash-stack" id="flash-stack">
+      {% for cat, msg in msgs %}
+        <div class="flash flash--{{ cat }}">
+          <span>{{ msg }}</span>
+          <button onclick="this.closest('.flash').remove()">×</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- Navigation -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="{{ url_for('index') }}" class="nav-logo">CineNusa</a>
+
+    <div class="nav-links">
+      <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint=='index' %}active{% endif %}">
+        <i class="bi bi-house"></i> Beranda
+      </a>
+      <a href="{{ url_for('search') }}" class="nav-link {% if request.endpoint in ('search','genre_page') %}active{% endif %}">
+        <i class="bi bi-grid"></i> Jelajah
+      </a>
+      <a href="{{ url_for('swipe') }}" class="nav-link {% if request.endpoint=='swipe' %}active{% endif %}">
+        <i class="bi bi-hand-index-thumb"></i> Swipe
+      </a>
+      <a href="{{ url_for('compare') }}" class="nav-link {% if request.endpoint=='compare' %}active{% endif %}">
+        <i class="bi bi-layout-split"></i> Bandingkan
+      </a>
+    </div>
+
+    <!-- Live search -->
+    <div class="nav-search">
+      <div class="nav-search-form">
+        <input type="text" id="nav-q" placeholder="Cari film…" autocomplete="off" spellcheck="false"
+               value="{{ request.args.get('q','') }}">
+        <button type="button" id="nav-search-btn"><i class="bi bi-search"></i></button>
+      </div>
+      <div class="ac-box" id="autocomplete-box"></div>
+    </div>
+
+    <div class="nav-right">
+      {% if n_rated > 0 %}
+        <a href="{{ url_for('recommendations') }}" class="nav-btn highlight">
+          <i class="bi bi-stars"></i> Rekomendasi <em>{{ n_rated }}</em>
+        </a>
+      {% else %}
+        <a href="{{ url_for('recommendations') }}" class="nav-btn">
+          <i class="bi bi-stars"></i> Rekomendasi
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<!-- Page Content -->
+{% block content %}{% endblock %}
+
+<!-- Footer -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span class="footer-brand"><i class="bi bi-camera-reels-fill"></i> CineNusa</span>
+    <span style="opacity:.4">·</span>
+    <span>Sistem Rekomendasi Film Indonesia</span>
+    <span style="opacity:.4">·</span>
+    <span>SVD Collaborative Filtering + Content-Based</span>
+    <span style="margin-left:auto;opacity:.5">SENATIB 2026</span>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+{% block title %}CineNusa — Rekomendasi Film Indonesia{% endblock %}
+
+{% block content %}
+
+{# ── HERO ──────────────────────────────────────────────────────────────── #}
+<section class="hero-section">
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <i class="bi bi-film"></i> Sistem Rekomendasi Film Indonesia
+      </div>
+      <h1 class="hero-h1">
+        Temukan Film<br>
+        <span class="line-stroke">Indonesia</span><br>
+        Terbaik
+      </h1>
+      <p class="hero-sub">
+        Rekomendasi personal berbasis SVD &amp; Content-Based Filtering dari
+        <strong>{{ stats.total_movies if stats else '' }} film</strong> Indonesia terbaik.
+      </p>
+      <div class="hero-btns">
+        {% if n_rated == 0 %}
+          <a href="{{ url_for('search') }}" class="btn btn-black btn-lg">
+            <i class="bi bi-play-fill"></i> Mulai Jelajah
+          </a>
+          <a href="{{ url_for('swipe') }}" class="btn btn-white btn-lg">
+            <i class="bi bi-hand-index-thumb"></i> Swipe Film
+          </a>
+        {% else %}
+          <a href="{{ url_for('recommendations') }}" class="btn btn-black btn-lg">
+            <i class="bi bi-stars"></i> Lihat Rekomendasi
+          </a>
+          <a href="{{ url_for('search') }}" class="btn btn-white btn-lg">
+            <i class="bi bi-search"></i> Cari Film
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Decorative poster tiles #}
+    <div class="hero-deco">
+      <div class="hero-deco-strip">
+        {% for m in featured[:4] %}
+          {% set g0 = m.genre.replace('|',',').split(',')[0].strip() if m.genre and m.genre != 'nan' else '' %}
+          <div class="hero-deco-tile" data-genre="{{ g0 }}">
+            <div class="hero-deco-tile-bg"><i class="bi bi-film"></i></div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ── STATS TICKER ──────────────────────────────────────────────────────── #}
+{% if stats %}
+<div class="ticker-wrap">
+  <div class="ticker" id="ticker">
+    {% for i in range(2) %}
+      <div class="ticker-item"><span class="ticker-val">{{ stats.total_movies }}</span> Film Indonesia</div>
+      <div class="ticker-item"><span class="ticker-val">{{ stats.genres_count }}</span> Genre</div>
+      <div class="ticker-item"><span class="ticker-val">{{ "%.1f"|format(stats.avg_rating) }}</span> Rata-rata Rating</div>
+      <div class="ticker-item"><i class="bi bi-cpu-fill"></i> Algoritma SVD Collaborative Filtering</div>
+      <div class="ticker-item"><i class="bi bi-diagram-3-fill"></i> Content-Based Filtering + TF-IDF</div>
+      <div class="ticker-item"><i class="bi bi-star-fill"></i> {{ stats.total_movies }} Film Tersedia</div>
+      <div class="ticker-item"><i class="bi bi-camera-reels-fill"></i> CineNusa · SENATIB 2026</div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{# ── MOOD FILTER ───────────────────────────────────────────────────────── #}
+<section class="mood-section">
+  <div class="mood-inner">
+    <div class="mood-title">Lagi pengen nonton apa? <span>Pilih suasana hatimu</span></div>
+    <div class="mood-grid">
+      <button class="mood-btn" data-mood="Seru" data-genres="Action,Adventure,Thriller">
+        <span class="mood-icon"><i class="bi bi-lightning-charge-fill"></i></span> Seru &amp; Menegangkan
+      </button>
+      <button class="mood-btn" data-mood="Komedi" data-genres="Comedy">
+        <span class="mood-icon"><i class="bi bi-balloon-heart-fill"></i></span> Ketawa-ketawa
+      </button>
+      <button class="mood-btn" data-mood="Romantis" data-genres="Romance">
+        <span class="mood-icon"><i class="bi bi-heart-fill"></i></span> Romantis
+      </button>
+      <button class="mood-btn" data-mood="Horor" data-genres="Horror">
+        <span class="mood-icon"><i class="bi bi-moon-stars-fill"></i></span> Bikin Merinding
+      </button>
+      <button class="mood-btn" data-mood="Inspiratif" data-genres="Biography,History,Drama">
+        <span class="mood-icon"><i class="bi bi-lightbulb-fill"></i></span> Inspiratif
+      </button>
+      <button class="mood-btn" data-mood="Fantasi" data-genres="Sci-Fi,Fantasy,Animation">
+        <span class="mood-icon"><i class="bi bi-rocket-takeoff-fill"></i></span> Fantasi &amp; Sci-Fi
+      </button>
+    </div>
+  </div>
+</section>
+
+{# ── MOOD RESULTS (hidden until a mood is selected) ─────────────────────── #}
+<div id="mood-result-section" style="display:none;">
+  <div class="content-body">
+    <div class="row-section">
+      <div class="row-header">
+        <div class="row-num" id="mood-emoji-display">🎬</div>
+        <h2 class="row-title" id="mood-result-title">Film Sesuai Mood</h2>
+        <a href="#" class="row-link" id="mood-see-all">Lihat semua <i class="bi bi-arrow-right"></i></a>
+      </div>
+      <div class="film-row" id="mood-film-row">
+        <div class="row-loader"><i class="bi bi-arrow-repeat row-loader"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── MAIN CONTENT ROWS ─────────────────────────────────────────────────── #}
+<div class="content-body">
+
+  {% if n_rated > 0 %}
+  <div style="background:var(--k);border:var(--brd);border-radius:var(--r);padding:16px 24px;display:flex;align-items:center;gap:16px;box-shadow:var(--sh);margin-top:40px;flex-wrap:wrap;">
+    <span style="font-size:1.4rem;color:var(--y)"><i class="bi bi-stars"></i></span>
+    <div style="flex:1">
+      <div style="font-family:'Syne',sans-serif;font-weight:900;color:var(--y);font-size:1rem;">Rekomendasi Personal Siap!</div>
+      <div style="color:rgba(255,229,0,.6);font-size:.82rem;">Anda telah merating <strong style="color:var(--y)">{{ n_rated }} film</strong></div>
+    </div>
+    <a href="{{ url_for('recommendations') }}" class="btn btn-yellow">
+      <i class="bi bi-stars"></i> Lihat Rekomendasi
+    </a>
+  </div>
+  {% endif %}
+
+  {# Popular row #}
+  {% if featured %}
+  <div class="row-section">
+    <div class="row-header">
+      <div class="row-num"><i class="bi bi-trophy-fill"></i></div>
+      <h2 class="row-title">Film Terpopuler</h2>
+      <a href="{{ url_for('search') }}" class="row-link">Lihat semua <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="film-row" id="popular-row">
+      {% for m in featured %}
+        {% set g0 = m.genre.replace('|',',').split(',')[0].strip() if m.genre and m.genre != 'nan' else '' %}
+        <article class="fcard">
+          <a href="{{ url_for('movie_detail', movie_id=m.movieId) }}" style="display:block;color:inherit">
+            <div class="fcard-poster">
+              <div class="fcard-bg" data-genre="{{ g0 }}" style="background:var(--k)">
+                <div class="fcard-bg-title">{{ m.title }}</div>
+                {% if m.year and m.year not in ('nan','') %}<div class="fcard-bg-year">{{ m.year }}</div>{% endif %}
+                <div class="fcard-bg-icon"><i class="bi bi-film"></i></div>
+              </div>
+              <div class="fcard-colorbar" data-genre="{{ g0 }}"></div>
+              <div class="fcard-overlay">
+                <div class="fcard-rating"><i class="bi bi-star-fill"></i> {{ "%.1f"|format(m.rating|float) }}</div>
+                {% if g0 %}<div class="fcard-genre-label">{{ g0 }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="fcard-label">
+              <div class="fcard-name">{{ m.title }}</div>
+              <div class="fcard-meta">{{ m.year if m.year and m.year not in ('nan','') else '' }}</div>
+            </div>
+          </a>
+        </article>
+      {% endfor %}
+      <div class="see-all-tile">
+        <a href="{{ url_for('search') }}"><i class="bi bi-grid-3x3-gap"></i><span>Semua</span></a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Genre rows — lazy loaded #}
+  {% for g in genres[:10] %}
+  <div class="row-section">
+    <div class="row-header">
+      <div class="row-num">{{ loop.index }}</div>
+      <h2 class="row-title">{{ g }}</h2>
+      <a href="{{ url_for('genre_page', genre_name=g) }}" class="row-link">Lihat semua <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="film-row genre-row" data-genre="{{ g }}" id="row-genre-{{ loop.index }}">
+      <span style="color:var(--dim);font-size:.85rem;padding:20px 0;display:flex;align-items:center;gap:8px">
+        <i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite"></i> Memuat…
+      </span>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── Decorative tile colors ── */
+document.querySelectorAll('.hero-deco-tile[data-genre]').forEach(tile => {
+  const col = GENRE_COLORS[tile.dataset.genre.toLowerCase()] || '#333';
+  tile.style.background = col;
+});
+
+/* ── Mood filter ── */
+const MOOD_MAP = {
+  'Action':    '/api/search?q=Action&field=genre&n=14',
+  'Adventure': '/api/search?q=Adventure&field=genre&n=14',
+  'Thriller':  '/api/search?q=Thriller&field=genre&n=14',
+  'Comedy':    '/api/search?q=Comedy&field=genre&n=14',
+  'Romance':   '/api/search?q=Romance&field=genre&n=14',
+  'Horror':    '/api/search?q=Horror&field=genre&n=14',
+  'Biography': '/api/search?q=Biography&field=genre&n=14',
+  'History':   '/api/search?q=History&field=genre&n=14',
+  'Drama':     '/api/search?q=Drama&field=genre&n=14',
+  'Sci-Fi':    '/api/search?q=Sci-Fi&field=genre&n=14',
+  'Fantasy':   '/api/search?q=Fantasy&field=genre&n=14',
+  'Animation': '/api/search?q=Animation&field=genre&n=14',
+};
+
+document.querySelectorAll('.mood-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const genres = btn.dataset.genres.split(',');
+    const emoji  = btn.querySelector('.mood-emoji').textContent;
+    const label  = btn.dataset.mood;
+
+    const section = document.getElementById('mood-result-section');
+    const row     = document.getElementById('mood-film-row');
+    const title   = document.getElementById('mood-result-title');
+    const emojiEl = document.getElementById('mood-emoji-display');
+    const seeAll  = document.getElementById('mood-see-all');
+
+    title.textContent = `Film ${label}`;
+    emojiEl.textContent = emoji;
+    section.style.display = '';
+    row.innerHTML = '<span style="color:var(--dim);font-size:.85rem;padding:20px 0;display:flex;align-items:center;gap:8px"><i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite"></i> Memuat…</span>';
+    seeAll.href = `/genre/${encodeURIComponent(genres[0])}`;
+
+    // Fetch each genre and combine
+    const all = [];
+    for (const g of genres) {
+      try {
+        const data = await fetch(`/api/search?q=${encodeURIComponent(g)}&field=genre&n=10`).then(r=>r.json());
+        all.push(...data);
+      } catch(e) {}
+    }
+    // Deduplicate by movieId
+    const seen = new Set();
+    const unique = all.filter(m => { if(seen.has(m.movieId)) return false; seen.add(m.movieId); return true; });
+
+    row.innerHTML = '';
+    if (!unique.length) {
+      row.innerHTML = '<span style="color:var(--dim);padding:20px">Tidak ada film ditemukan</span>';
+      return;
+    }
+    unique.slice(0,14).forEach(m => row.insertAdjacentHTML('beforeend', buildCard(m)));
+    row.insertAdjacentHTML('beforeend',
+      `<div class="see-all-tile"><a href="/genre/${encodeURIComponent(genres[0])}"><i class="bi bi-grid-3x3-gap"></i><span>Semua</span></a></div>`);
+    applyCardColors(row);
+    section.scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+});
+
+/* ── Popular row card colors ── */
+applyCardColors(document.getElementById('popular-row'));
+
+/* ── Lazy-load genre rows ── */
+document.querySelectorAll('.genre-row').forEach(row => {
+  const g = row.dataset.genre;
+  const io = new IntersectionObserver(entries => {
+    if (!entries[0].isIntersecting) return;
+    io.disconnect();
+    fetch(`/api/search?q=${encodeURIComponent(g)}&field=genre&n=14`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.length) { row.innerHTML = '<span style="color:var(--dim);font-size:.84rem;padding:12px">Tidak ada film</span>'; return; }
+        row.innerHTML = '';
+        data.forEach(m => row.insertAdjacentHTML('beforeend', buildCard(m)));
+        row.insertAdjacentHTML('beforeend',
+          `<div class="see-all-tile"><a href="/genre/${encodeURIComponent(g)}"><i class="bi bi-grid-3x3-gap"></i><span>Semua</span></a></div>`);
+        applyCardColors(row);
+      })
+      .catch(() => { row.innerHTML = ''; });
+  }, { rootMargin:'400px' });
+  io.observe(row);
+});
+</script>
+{% endblock %}

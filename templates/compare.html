@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% block title %}Bandingkan Film — CineNusa{% endblock %}
+
+{% block content %}
+<div class="compare-page">
+
+  <div class="compare-header">
+    <h1><i class="bi bi-layout-split"></i> Bandingkan Film</h1>
+    <p>Pilih dua film dan lihat perbandingan detailnya secara side-by-side</p>
+  </div>
+
+  {# Selectors #}
+  <form method="get" action="{{ url_for('compare') }}" id="compare-form">
+    <div class="compare-selectors">
+      <div class="compare-select-group">
+        <label>Film Pertama</label>
+        <select name="id1" class="compare-select-input" onchange="this.form.submit()">
+          <option value="">— Pilih Film —</option>
+          {% for m in top %}
+            {% set g0 = m.genre.replace('|',',').split(',')[0].strip() if m.genre and m.genre != 'nan' else '' %}
+            <option value="{{ m.movieId }}" {% if m1 and m1.movieId == m.movieId %}selected{% endif %}>
+              {{ m.title }} {% if m.year and m.year not in ('nan','') %}({{ m.year }}){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="compare-vs">VS</div>
+
+      <div class="compare-select-group">
+        <label>Film Kedua</label>
+        <select name="id2" class="compare-select-input" onchange="this.form.submit()">
+          <option value="">— Pilih Film —</option>
+          {% for m in top %}
+            {% set g0 = m.genre.replace('|',',').split(',')[0].strip() if m.genre and m.genre != 'nan' else '' %}
+            <option value="{{ m.movieId }}" {% if m2 and m2.movieId == m.movieId %}selected{% endif %}>
+              {{ m.title }} {% if m.year and m.year not in ('nan','') %}({{ m.year }}){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </form>
+
+  {# Comparison grid #}
+  {% if m1 and m2 %}
+    {% set g1 = m1.genre.replace('|',',').split(',')[0].strip() if m1.genre and m1.genre != 'nan' else '' %}
+    {% set g2 = m2.genre.replace('|',',').split(',')[0].strip() if m2.genre and m2.genre != 'nan' else '' %}
+    {% set r1 = m1.rating|float %}
+    {% set r2 = m2.rating|float %}
+
+    <div class="compare-grid" id="compare-grid">
+
+      {# Film 1 column #}
+      <div class="compare-col">
+        <div class="compare-col-header" id="col-header-1" data-genre="{{ g1 }}">
+          <div class="compare-col-poster" id="poster-1" data-genre="{{ g1 }}">
+            {% if m1.poster_url and m1.poster_url not in ('nan','','None') %}
+              <img src="{{ m1.poster_url }}" alt="{{ m1.title }}" onerror="this.remove()" style="width:100%;height:100%;object-fit:cover">
+            {% else %}
+              <span style="font-size:1.5rem;opacity:.2"><i class="bi bi-film"></i></span>
+            {% endif %}
+          </div>
+          <div>
+            <div class="compare-col-title">{{ m1.title }}</div>
+            <div class="compare-col-meta">
+              {% if m1.year and m1.year not in ('nan','') %}{{ m1.year }} · {% endif %}{{ g1 }}
+            </div>
+            <div class="detail-genre-tags" style="margin-top:8px">
+              {% for g in m1.genre.replace('|',',').split(',')[:3] %}<span class="dgt" style="font-size:.65rem">{{ g.strip() }}</span>{% endfor %}
+            </div>
+          </div>
+        </div>
+
+        {# Stats for film 1 #}
+        <div class="compare-row">
+          <div class="compare-cell">
+            <div class="compare-cell-label">Rating IMDB</div>
+            <div class="compare-cell-val {% if r1 > r2 %}winner{% endif %}">
+              <div class="compare-bar-wrap">
+                <span style="color:#f5c518;font-weight:900">⭐ {{ "%.1f"|format(r1) }}</span>
+                <div class="compare-bar"><div class="compare-bar-fill" style="width:{{ (r1/10*100)|int }}%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell">
+            <div class="compare-cell-label">Sutradara</div>
+            <div class="compare-cell-val">{{ m1.director if m1.director and m1.director not in ('nan','') else '—' }}</div>
+          </div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell">
+            <div class="compare-cell-label">Tahun</div>
+            <div class="compare-cell-val {% if m1.year and m2.year and m1.year|int > m2.year|int %}winner{% endif %}">
+              {{ m1.year if m1.year and m1.year not in ('nan','') else '—' }}
+            </div>
+          </div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell">
+            <div class="compare-cell-label">Durasi</div>
+            <div class="compare-cell-val">{{ m1.duration if m1.duration and m1.duration not in ('nan','') else '—' }}</div>
+          </div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell">
+            <div class="compare-cell-label">Votes</div>
+            <div class="compare-cell-val {% if m1.votes and m2.votes and m1.votes|int > m2.votes|int %}winner{% endif %}">
+              {% if m1.votes %}{{ "{:,}".format(m1.votes|int) }}{% else %}—{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell">
+            <div class="compare-cell-label">Pemain</div>
+            <div class="compare-cell-val" style="font-size:.8rem">{{ m1.stars[:80] if m1.stars and m1.stars not in ('nan','') else '—' }}</div>
+          </div>
+        </div>
+        <div style="padding:14px 20px;border-top:1.5px solid #f0f0f0">
+          <a href="{{ url_for('movie_detail', movie_id=m1.movieId) }}" class="btn btn-black btn-sm" style="width:100%;justify-content:center">
+            <i class="bi bi-info-circle"></i> Detail Film
+          </a>
+        </div>
+      </div>
+
+      {# Film 2 column #}
+      <div class="compare-col">
+        <div class="compare-col-header" id="col-header-2" data-genre="{{ g2 }}">
+          <div class="compare-col-poster" id="poster-2" data-genre="{{ g2 }}">
+            {% if m2.poster_url and m2.poster_url not in ('nan','','None') %}
+              <img src="{{ m2.poster_url }}" alt="{{ m2.title }}" onerror="this.remove()" style="width:100%;height:100%;object-fit:cover">
+            {% else %}
+              <span style="font-size:1.5rem;opacity:.2"><i class="bi bi-film"></i></span>
+            {% endif %}
+          </div>
+          <div>
+            <div class="compare-col-title">{{ m2.title }}</div>
+            <div class="compare-col-meta">
+              {% if m2.year and m2.year not in ('nan','') %}{{ m2.year }} · {% endif %}{{ g2 }}
+            </div>
+            <div class="detail-genre-tags" style="margin-top:8px">
+              {% for g in m2.genre.replace('|',',').split(',')[:3] %}<span class="dgt" style="font-size:.65rem">{{ g.strip() }}</span>{% endfor %}
+            </div>
+          </div>
+        </div>
+
+        {# Stats for film 2 #}
+        <div class="compare-row">
+          <div class="compare-cell">
+            <div class="compare-cell-label">Rating IMDB</div>
+            <div class="compare-cell-val {% if r2 > r1 %}winner{% endif %}">
+              <div class="compare-bar-wrap">
+                <span style="color:#f5c518;font-weight:900">⭐ {{ "%.1f"|format(r2) }}</span>
+                <div class="compare-bar"><div class="compare-bar-fill" style="width:{{ (r2/10*100)|int }}%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell">
+            <div class="compare-cell-label">Sutradara</div>
+            <div class="compare-cell-val">{{ m2.director if m2.director and m2.director not in ('nan','') else '—' }}</div>
+          </div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell">
+            <div class="compare-cell-label">Tahun</div>
+            <div class="compare-cell-val {% if m2.year and m1.year and m2.year|int > m1.year|int %}winner{% endif %}">
+              {{ m2.year if m2.year and m2.year not in ('nan','') else '—' }}
+            </div>
+          </div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell">
+            <div class="compare-cell-label">Durasi</div>
+            <div class="compare-cell-val">{{ m2.duration if m2.duration and m2.duration not in ('nan','') else '—' }}</div>
+          </div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell">
+            <div class="compare-cell-label">Votes</div>
+            <div class="compare-cell-val {% if m2.votes and m1.votes and m2.votes|int > m1.votes|int %}winner{% endif %}">
+              {% if m2.votes %}{{ "{:,}".format(m2.votes|int) }}{% else %}—{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell">
+            <div class="compare-cell-label">Pemain</div>
+            <div class="compare-cell-val" style="font-size:.8rem">{{ m2.stars[:80] if m2.stars and m2.stars not in ('nan','') else '—' }}</div>
+          </div>
+        </div>
+        <div style="padding:14px 20px;border-top:1.5px solid #f0f0f0">
+          <a href="{{ url_for('movie_detail', movie_id=m2.movieId) }}" class="btn btn-black btn-sm" style="width:100%;justify-content:center">
+            <i class="bi bi-info-circle"></i> Detail Film
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    {# Winner banner #}
+    <div style="text-align:center;margin-top:24px;padding:20px;background:var(--y);border:var(--brd);border-radius:var(--r);box-shadow:var(--sh)">
+      <div style="font-family:'Syne',sans-serif;font-weight:900;font-size:1.1rem;margin-bottom:4px">
+        {% if r1 > r2 %}
+          <i class="bi bi-trophy-fill"></i> {{ m1.title }} lebih unggul dengan rating {{ "%.1f"|format(r1) }}
+        {% elif r2 > r1 %}
+          <i class="bi bi-trophy-fill"></i> {{ m2.title }} lebih unggul dengan rating {{ "%.1f"|format(r2) }}
+        {% else %}
+          <i class="bi bi-handshake-fill"></i> Kedua film memiliki rating yang sama!
+        {% endif %}
+      </div>
+      <div style="font-size:.82rem;color:rgba(0,0,0,.5)">Berdasarkan rating IMDB</div>
+    </div>
+
+  {% elif m1 or m2 %}
+    <div class="compare-empty">
+      <i class="bi bi-layout-split" style="font-size:3rem;opacity:.2;display:block;margin-bottom:14px"></i>
+      <p>Pilih film kedua untuk mulai perbandingan</p>
+    </div>
+  {% else %}
+    <div class="compare-empty">
+      <i class="bi bi-layout-split" style="font-size:3rem;opacity:.2;display:block;margin-bottom:14px"></i>
+      <p>Pilih dua film di atas untuk membandingkannya</p>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* Apply genre colors to compare poster headers */
+document.querySelectorAll('[id^="poster-"][data-genre]').forEach(el => {
+  const col = GENRE_COLORS[el.dataset.genre.toLowerCase()] || '#1a1a1a';
+  if (!el.querySelector('img')) el.style.background = col;
+});
+document.querySelectorAll('[id^="col-header-"]').forEach(el => {
+  const g = el.dataset.genre?.toLowerCase() || '';
+  const col = GENRE_COLORS[g] || '#f5f5f5';
+  el.style.background = col + '22';
+});
+
+/* Animate bars on load */
+setTimeout(() => {
+  document.querySelectorAll('.compare-bar-fill').forEach(bar => {
+    const w = bar.style.width;
+    bar.style.width = '0';
+    requestAnimationFrame(() => {
+      setTimeout(() => bar.style.width = w, 50);
+    });
+  });
+}, 200);
+</script>
+{% endblock %}

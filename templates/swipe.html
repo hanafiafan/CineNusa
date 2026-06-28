@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% block title %}Swipe Rating — CineNusa{% endblock %}
+
+{% block content %}
+<div class="swipe-page">
+
+  <div class="swipe-header">
+    <div style="display:inline-block;background:var(--y);border:var(--brd);border-radius:var(--rs);padding:6px 16px;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;box-shadow:var(--sh);margin-bottom:14px">
+      <i class="bi bi-stars"></i> Fitur Interaktif
+    </div>
+    <h1>Swipe &amp; Rating</h1>
+    <p>Geser atau tekan tombol untuk menilai film</p>
+    <div class="swipe-legend">
+      <span style="background:#FFE8E8"><i class="bi bi-x-lg" style="color:#FF4444"></i> Skip</span>
+      <span style="background:#E8FFE8"><i class="bi bi-heart-fill" style="color:#22CC55"></i> Suka</span>
+      <span style="background:var(--yl)"><i class="bi bi-star-fill" style="color:#f5c518"></i> Favorit (5★)</span>
+    </div>
+  </div>
+
+  {# Cards #}
+  <div class="swipe-arena" id="swipe-arena">
+    {% for m in movies %}
+      {% set g0 = m.genre.replace('|',',').split(',')[0].strip() if m.genre and m.genre != 'nan' else '' %}
+      <div class="swipe-card {% if loop.first %}is-top{% endif %}"
+           data-id="{{ m.movieId }}"
+           data-title="{{ m.title }}"
+           data-genre="{{ g0 }}"
+           data-rating="{{ "%.1f"|format(m.rating|float) }}">
+
+        <div class="swipe-card-img" data-genre="{{ g0 }}">
+          <div class="swipe-card-bg"><i class="bi bi-film"></i></div>
+        </div>
+
+        <div class="swipe-card-info">
+          <div class="swipe-card-title">{{ m.title }}</div>
+          <div class="swipe-card-meta">
+            {% if m.year and m.year not in ('nan','') %}
+              <span>{{ m.year }}</span>
+            {% endif %}
+            <span class="swipe-card-rating"><i class="bi bi-star-fill"></i> {{ "%.1f"|format(m.rating|float) }}</span>
+            {% if g0 %}
+              <span class="swipe-card-genre-pill" data-genre="{{ g0 }}">{{ g0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="vote-nope">SKIP</div>
+        <div class="vote-like">SUKA!</div>
+        <div class="vote-super">⭐ FAVORIT</div>
+      </div>
+    {% endfor %}
+  </div>
+
+  {# Done state #}
+  <div class="swipe-done" id="swipe-done">
+    <div style="font-size:4rem;margin-bottom:12px">🎉</div>
+    <h2>Selesai!</h2>
+    <p>Kamu sudah menilai semua film yang tersedia.</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <a href="{{ url_for('recommendations') }}" class="btn btn-black btn-lg">
+        <i class="bi bi-stars"></i> Lihat Rekomendasi
+      </a>
+      <a href="{{ url_for('index') }}" class="btn btn-outline btn-lg">
+        <i class="bi bi-house"></i> Beranda
+      </a>
+    </div>
+  </div>
+
+  {# Controls #}
+  <div class="swipe-controls" id="swipe-controls">
+    <button class="swipe-btn skip" id="btn-skip" title="Skip (←)">
+      <span>✕</span>
+      <span class="swipe-btn-label">Skip</span>
+    </button>
+    <button class="swipe-btn like" id="btn-like" title="Suka (→)">
+      <span>♥</span>
+      <span class="swipe-btn-label">Suka</span>
+    </button>
+    <button class="swipe-btn super" id="btn-super" title="Favorit (↑)">
+      <span>⭐</span>
+      <span class="swipe-btn-label">Favorit</span>
+    </button>
+  </div>
+
+  <div class="swipe-progress">
+    <span id="swipe-count">0</span> / {{ movies|length }} film dinilai
+    <div class="swipe-bar">
+      <div class="swipe-fill" id="swipe-fill" style="width:0%"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── Swipe page logic ── */
+const arena   = document.getElementById('swipe-arena');
+const doneEl  = document.getElementById('swipe-done');
+const ctrlEl  = document.getElementById('swipe-controls');
+const countEl = document.getElementById('swipe-count');
+const fillEl  = document.getElementById('swipe-fill');
+const TOTAL   = {{ movies|length }};
+let rated     = 0;
+
+function getTopCard() {
+  return arena.querySelector('.swipe-card.is-top');
+}
+function getCards() {
+  return [...arena.querySelectorAll('.swipe-card')];
+}
+
+/* Apply genre backgrounds to all visible cards */
+function applySwipeColors() {
+  arena.querySelectorAll('.swipe-card').forEach(card => {
+    const g   = card.dataset.genre?.toLowerCase() || '';
+    const col = GENRE_COLORS[g] || '#1a1a1a';
+    const img = card.querySelector('.swipe-card-img');
+    if (img) img.style.background = col;
+    const pill = card.querySelector('.swipe-card-genre-pill');
+    if (pill) pill.style.background = col + '33';
+  });
+}
+applySwipeColors();
+
+/* Promote next card to .is-top */
+function promoteNext() {
+  const cards = getCards();
+  if (!cards.length) {
+    doneEl.style.display = 'block';
+    ctrlEl.style.opacity = '.3';
+    ctrlEl.style.pointerEvents = 'none';
+    return;
+  }
+  cards[0].classList.add('is-top');
+  cards.slice(1, 3).forEach((c, i) => {
+    c.style.transform = i === 0
+      ? 'rotate(2deg) translate(8px,-6px) scale(.97)'
+      : 'rotate(-1.5deg) translate(-10px,-12px) scale(.94)';
+  });
+}
+
+function updateProgress() {
+  countEl.textContent = rated;
+  fillEl.style.width  = Math.round((rated / TOTAL) * 100) + '%';
+}
+
+async function sendRating(movieId, rating) {
+  const fd = new FormData();
+  fd.append('movie_id', movieId);
+  fd.append('rating', rating);
+  fd.append('action', 'rate');
+  try {
+    await fetch('/rate', { method:'POST', body:fd, redirect:'manual' });
+  } catch(e) {}
+}
+
+function animateOut(card, dir) {
+  const cls = dir === 'left' ? 'fly-left' : dir === 'right' ? 'fly-right' : 'fly-up';
+  card.classList.remove('is-top');
+  card.classList.add(cls);
+  setTimeout(() => card.remove(), 380);
+  rated++;
+  updateProgress();
+  setTimeout(promoteNext, 50);
+}
+
+function skip()  { const c = getTopCard(); if (c) animateOut(c, 'left'); }
+function like()  {
+  const c = getTopCard();
+  if (!c) return;
+  sendRating(c.dataset.id, 3.5);
+  animateOut(c, 'right');
+}
+function superLike() {
+  const c = getTopCard();
+  if (!c) return;
+  sendRating(c.dataset.id, 5.0);
+  animateOut(c, 'up');
+  launchConfetti();
+}
+
+document.getElementById('btn-skip').addEventListener('click', skip);
+document.getElementById('btn-like').addEventListener('click', like);
+document.getElementById('btn-super').addEventListener('click', superLike);
+
+/* Keyboard */
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); skip(); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); like(); }
+  if (e.key === 'ArrowUp')    { e.preventDefault(); superLike(); }
+});
+
+/* ── Drag / swipe ── */
+(function() {
+  let startX, startY, curX, curY, dragging = false;
+
+  function getTop() { return getTopCard(); }
+
+  function onStart(x, y) {
+    const c = getTop(); if (!c) return;
+    startX = x; startY = y; curX = x; curY = y; dragging = true;
+  }
+  function onMove(x, y) {
+    if (!dragging) return;
+    const c = getTop(); if (!c) return;
+    curX = x; curY = y;
+    const dx = curX - startX;
+    const dy = curY - startY;
+    const rot = dx * 0.08;
+    c.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg)`;
+    c.style.transition = 'none';
+
+    const nope  = c.querySelector('.vote-nope');
+    const lk    = c.querySelector('.vote-like');
+    const su    = c.querySelector('.vote-super');
+    const ratio = Math.abs(dx) / 80;
+    if (dx < -20) { nope.style.opacity = Math.min(ratio,1); lk.style.opacity=0; su.style.opacity=0; }
+    else if (dx > 20) { lk.style.opacity = Math.min(ratio,1); nope.style.opacity=0; su.style.opacity=0; }
+    else if (dy < -30) { su.style.opacity = Math.min(Math.abs(dy)/80,1); nope.style.opacity=0; lk.style.opacity=0; }
+    else { nope.style.opacity=0; lk.style.opacity=0; su.style.opacity=0; }
+  }
+  function onEnd() {
+    if (!dragging) return;
+    dragging = false;
+    const c = getTop(); if (!c) return;
+    c.style.transition = '';
+    const dx = curX - startX;
+    const dy = curY - startY;
+    if (dx < -60)       skip();
+    else if (dx > 60)   like();
+    else if (dy < -80)  superLike();
+    else {
+      c.style.transform = '';
+      c.querySelectorAll('.vote-nope,.vote-like,.vote-super').forEach(v => v.style.opacity=0);
+    }
+  }
+
+  arena.addEventListener('mousedown',  e => { onStart(e.clientX, e.clientY); e.preventDefault(); });
+  window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+  window.addEventListener('mouseup',   () => onEnd());
+  arena.addEventListener('touchstart', e => { const t=e.touches[0]; onStart(t.clientX,t.clientY); }, {passive:true});
+  window.addEventListener('touchmove', e => { const t=e.touches[0]; onMove(t.clientX,t.clientY); }, {passive:true});
+  window.addEventListener('touchend',  () => onEnd());
+})();
+</script>
+{% endblock %}

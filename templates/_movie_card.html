@@ -1,0 +1,40 @@
+<article class="movie-card">
+  <a href="{{ url_for('movie_detail', movie_id=m.movieId) }}" class="card-link">
+    <div class="card-poster"
+         data-genre="{{ m.genre.replace('|',',').split(',')[0].strip() if m.genre and m.genre != 'nan' else '' }}"
+         data-id="{{ m.movieId }}">
+      {% if m.poster_url and m.poster_url not in ('nan','','None') %}
+        <img src="{{ m.poster_url }}" alt="{{ m.title }}" loading="lazy"
+             onerror="this.parentElement.classList.add('no-img'); this.remove();">
+      {% endif %}
+
+      <div class="poster-placeholder">
+        <div class="poster-title">{{ m.title }}</div>
+        {% if m.year and m.year not in ('nan','') %}
+          <div class="poster-year">{{ m.year }}</div>
+        {% endif %}
+        <div class="poster-icon"><i class="bi bi-film"></i></div>
+      </div>
+
+      <div class="card-overlay">
+        <span class="card-rating">
+          <i class="bi bi-star-fill"></i>
+          {{ "%.1f"|format(m.rating|float) }}
+        </span>
+        {% if m.genre and m.genre not in ('nan','') %}
+          <span class="card-genre-tag">
+            {{ m.genre.replace('|',',').split(',')[0].strip() }}
+          </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card-body">
+      <h3 class="card-title" title="{{ m.title }}">{{ m.title }}</h3>
+      <p class="card-meta">
+        {% if m.year and m.year not in ('nan','') %}<span>{{ m.year }}</span>{% endif %}
+        {% if m.duration and m.duration not in ('nan','') %}<span>{{ m.duration }}</span>{% endif %}
+      </p>
+    </div>
+  </a>
+</article>
