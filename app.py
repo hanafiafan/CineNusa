@@ -127,11 +127,12 @@ def search():
     field  = request.args.get('field', 'all')
     genre  = request.args.get('genre', '').strip()
 
-    results = []
     if query:
         results = _df_to_list(rec.search(query, field))
     elif genre:
         results = _df_to_list(rec.search(genre, 'genre'))
+    else:
+        results = _df_to_list(rec.get_top_rated(96))
 
     return render_template('search.html',
                            results=results,
