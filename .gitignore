@@ -45,3 +45,5 @@ flask_session/
 
 # Vercel
 .vercel/
+
+.vercel

@@ -923,9 +923,10 @@ body.cursor-click #cursor-dot {
   width: 100%; height: 240px;
   background: var(--surf3);
   display: flex; align-items: center; justify-content: center;
-  font-size: 4rem; color: var(--t3); opacity: 0.4;
-  overflow: hidden;
+  font-size: 4rem; color: var(--t3);
+  overflow: hidden; position: relative;
 }
+.swipe-card-bg { opacity: 0.4; }
 .swipe-card-img img { width: 100%; height: 100%; object-fit: cover; opacity: 1; }
 .swipe-card-info { padding: 16px 20px; text-align: left; }
 .swipe-card-title { font-family: var(--font-h); font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
@@ -937,10 +938,63 @@ body.cursor-click #cursor-dot {
   font-size: 1.4rem; display: flex; align-items: center; justify-content: center;
   transition: all var(--tr); cursor: pointer;
 }
-.swipe-btn.skip { color: var(--t2); }
-.swipe-btn.like { color: var(--green); border-color: var(--green); }
-.swipe-btn.love { color: var(--red);   border-color: var(--red);   }
+.swipe-btn.skip  { color: var(--t2); }
+.swipe-btn.like  { color: var(--green); border-color: var(--green); }
+.swipe-btn.love  { color: var(--red);   border-color: var(--red);   }
+.swipe-btn.super { color: #f5c518;      border-color: #f5c518;      }
 .swipe-btn:hover { transform: scale(1.14); box-shadow: 0 6px 24px rgba(0,0,0,0.45); }
+
+.swipe-controls {
+  display: flex; gap: 28px; justify-content: center;
+  align-items: flex-start; margin: 0 0 20px;
+}
+.swipe-btn-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.swipe-btn-label {
+  font-size: 0.72rem; color: var(--t2); font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.swipe-done { text-align: center; padding: 40px 20px; }
+.swipe-done h2 { font-family: var(--font-h); font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; }
+.swipe-done p  { color: var(--t2); margin-bottom: 20px; }
+
+.swipe-progress {
+  font-size: 0.82rem; color: var(--t2); margin-top: 12px;
+}
+.swipe-bar {
+  height: 4px; background: var(--surf3);
+  border-radius: 99px; margin-top: 8px; overflow: hidden;
+}
+.swipe-fill {
+  height: 100%; background: var(--cyan, #00d4ff);
+  border-radius: 99px; transition: width 0.3s ease;
+}
+
+.swipe-card-genre-pill {
+  display: inline-block; padding: 2px 10px;
+  border-radius: 999px; font-size: 0.74rem; font-weight: 600;
+}
+.swipe-card-rating { color: #f5c518; font-weight: 600; }
+.swipe-card-meta span { margin-right: 4px; }
+
+.vote-nope, .vote-like, .vote-super {
+  position: absolute; top: 18px;
+  font-size: 1.3rem; font-weight: 900; letter-spacing: 0.07em;
+  opacity: 0; pointer-events: none; transition: opacity 0.12s;
+  padding: 5px 14px; border-radius: 8px; border: 3px solid;
+}
+.vote-nope  { left: 14px;  color: #FF4444; border-color: #FF4444; transform: rotate(-8deg); }
+.vote-like  { right: 14px; color: #22CC55; border-color: #22CC55; transform: rotate(8deg); }
+.vote-super { left: 50%; transform: translateX(-50%); color: #f5c518; border-color: #f5c518; }
+
+@keyframes flyLeft  { to { transform: translate(-160%,40px) rotate(-30deg); opacity:0; } }
+@keyframes flyRight { to { transform: translate(160%,40px)  rotate(30deg);  opacity:0; } }
+@keyframes flyUp    { to { transform: translateY(-140%) scale(0.85);         opacity:0; } }
+.fly-left  { animation: flyLeft  0.38s ease forwards; }
+.fly-right { animation: flyRight 0.38s ease forwards; }
+.fly-up    { animation: flyUp    0.38s ease forwards; }
 
 /* ── 20. COMPARE PAGE ───────────────────────────────────────────── */
 .compare-page {
