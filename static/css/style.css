@@ -934,10 +934,10 @@ body.cursor-click #cursor-dot {
   display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
 }
 .swipe-legend span {
-  padding: 4px 12px; border-radius: 999px; font-size: 0.78rem;
-  display: flex; align-items: center; gap: 5px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--t2);
-  backdrop-filter: blur(6px);
+  padding: 5px 14px; border-radius: 999px; font-size: 0.8rem;
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); color: var(--t);
+  font-weight: 500;
 }
 
 /* Card arena */
@@ -950,7 +950,7 @@ body.cursor-click #cursor-dot {
   position: absolute; inset: 0; z-index: 1;
   background: var(--surf2); border-radius: 16px;
   overflow: hidden; border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
   transition: transform 0.3s ease, opacity 0.3s;
   display: flex; flex-direction: column;
 }
@@ -1005,10 +1005,14 @@ body.cursor-click #cursor-dot {
 /* Control buttons */
 .swipe-controls {
   display: flex; gap: 28px; justify-content: center;
-  align-items: flex-start; flex-shrink: 0; margin-bottom: 14px;
+  align-items: flex-start; flex-shrink: 0;
+  padding: 14px 28px 10px; margin-bottom: 8px;
+  background: rgba(10,10,18,0.75); backdrop-filter: blur(12px);
+  border-radius: 999px; border: 1px solid rgba(255,255,255,0.08);
+  position: relative; z-index: 20;
 }
 .swipe-btn-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.swipe-btn-label { font-size: 0.7rem; color: var(--t2); font-weight: 500; letter-spacing: 0.04em; }
+.swipe-btn-label { font-size: 0.7rem; color: var(--t); font-weight: 600; letter-spacing: 0.04em; }
 .swipe-btn {
   width: 60px; height: 60px; border-radius: 50%;
   background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.14);
@@ -1033,7 +1037,7 @@ body.cursor-click #cursor-dot {
 .swipe-done p  { color: var(--t2); }
 
 /* Progress */
-.swipe-progress { font-size: 0.8rem; color: var(--t2); width: 100%; flex-shrink: 0; }
+.swipe-progress { font-size: 0.8rem; color: var(--t); width: 100%; flex-shrink: 0; font-weight: 500; }
 .swipe-bar {
   height: 3px; background: rgba(255,255,255,0.08);
   border-radius: 99px; margin-top: 7px; overflow: hidden;
